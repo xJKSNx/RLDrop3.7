@@ -1,0 +1,3358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RL Drop Simulator</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #1a1d24;
+    --border: #2a2e38;
+    --text: #e8eaed;
+    --muted: #9aa0a6;
+    --accent: #f9ab00;
+    --green: #34a853;
+    --blue: #4285f4;
+    --purple: #a142f4;
+    --pink: #f44292;
+    --orange: #fa7b17;
+    --red: #ea4335;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.4;
+  }
+
+  .header {
+    background: linear-gradient(135deg, #1a1d24 0%, #12141a 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--accent); }
+
+  .credits-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+  }
+  .credits-box .amount { color: var(--accent); font-size: 1.2rem; }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .news-box {
+    background: linear-gradient(135deg, #3a2a10 0%, #1a1d24 100%);
+    border: 1px solid #c9a227;
+    border-radius: 12px;
+    padding: 8px 14px;
+    max-width: 420px;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    color: #ffe08a;
+  }
+  .news-box strong {
+    color: #ffd700;
+    display: inline-block;
+    margin-right: 4px;
+  }
+  @media (max-width: 700px) {
+    .header { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .news-box { max-width: 100%; }
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 16px 80px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    background: var(--card);
+    padding: 6px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+  }
+
+  .tab {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tab:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+  .tab.active {
+    background: var(--accent);
+    color: #111;
+  }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .section-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 14px;
+    color: var(--text);
+  }
+
+  .daily-card {
+    background: linear-gradient(135deg, #1e3a2f 0%, #1a1d24 100%);
+    border: 1px solid #2e5a45;
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .daily-card.claimed {
+    background: var(--card);
+    border-color: var(--border);
+    opacity: 0.7;
+  }
+
+  .crate-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+  }
+
+  .crate-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    transition: transform 0.15s, border-color 0.15s;
+  }
+  .crate-card:hover {
+    transform: translateY(-2px);
+    border-color: #3a3f4b;
+  }
+
+  .crate-name {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .crate-desc {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 16px;
+    min-height: 36px;
+  }
+  .crate-price {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .price {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .price.cant-afford { color: var(--red); }
+
+  .btn {
+    border: none;
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #111;
+  }
+  .btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
+  .btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .btn-green {
+    background: var(--green);
+    color: #fff;
+  }
+  .btn-green:hover:not(:disabled) { filter: brightness(1.1); }
+  .btn-green:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Inventory */
+  .rarity-section { margin-bottom: 28px; }
+  .rarity-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .rarity-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .rarity-count { color: var(--muted); font-size: 0.9rem; }
+
+  .item-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 10px;
+  }
+
+  .item-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    position: relative;
+  }
+  .item-card:hover {
+    border-color: #4a5060;
+  }
+  .item-card.selected {
+    border-color: var(--accent);
+    background: #252820;
+  }
+  .item-card.selected::after {
+    content: '✓';
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+  .item-name { font-weight: 600; margin-bottom: 2px; }
+  .item-meta { font-size: 0.8rem; color: var(--muted); }
+  .item-tags {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: #2a2e38;
+  }
+  .tag.painted { background: #1a3a4a; color: #4fc3f7; }
+  .tag.certified { background: #3a3010; color: #ffd54f; }
+
+  .sell-bar {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .sell-bar .sell-info {
+    font-size: 0.95rem;
+  }
+  .sell-bar .sell-info span {
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .sell-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .btn-secondary {
+    background: #2a2e38;
+    color: var(--text);
+  }
+  .btn-secondary:hover:not(:disabled) { background: #353a46; }
+  .btn-secondary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .btn-danger {
+    background: var(--red);
+    color: #fff;
+  }
+  .btn-danger:hover:not(:disabled) { filter: brightness(1.1); }
+  .btn-danger:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* Trade-in */
+  .trade-list { display: flex; flex-direction: column; gap: 12px; }
+  .trade-row {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .trade-info h3 { font-size: 1rem; margin-bottom: 2px; }
+  .trade-info p { font-size: 0.85rem; color: var(--muted); }
+
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+  .empty h3 { margin-bottom: 8px; color: var(--text); }
+
+  /* Overlay */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.78);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .modal {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px 40px;
+    text-align: center;
+    max-width: 420px;
+    width: 90%;
+    transform: scale(0.92);
+    transition: transform 0.25s;
+  }
+  .overlay.show .modal { transform: scale(1); }
+
+  .modal h2 { font-size: 1.1rem; color: var(--muted); margin-bottom: 12px; }
+  .modal .item-result {
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+  }
+  .modal .rarity-result {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .modal .extra { font-size: 0.95rem; margin-bottom: 6px; }
+  .modal .btn { margin-top: 18px; min-width: 120px; }
+
+  .opening-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .r-common { background: #5f6368; color: #fff; }
+  .r-uncommon { background: #34a853; color: #fff; }
+  .r-rare { background: #4285f4; color: #fff; }
+  .r-veryrare { background: #a142f4; color: #fff; }
+  .r-import { background: #f44292; color: #fff; }
+  .r-exotic { background: #fa7b17; color: #fff; }
+  .r-blackmarket { background: #ea4335; color: #fff; }
+  .r-beta { background: linear-gradient(90deg, #00e5ff, #d500f9); color: #fff; }
+  .r-zomba { background: linear-gradient(90deg, #ffd700, #ff8c00); color: #111; }
+  .r-dragon { background: linear-gradient(90deg, #ff1744, #7c1fff); color: #fff; }
+  .r-nova { background: linear-gradient(90deg, #7c4dff, #00e5ff); color: #fff; }
+  .r-title { background: linear-gradient(90deg, #00bcd4, #3f51b5); color: #fff; }
+
+  .footer-note {
+    text-align: center;
+    margin-top: 48px;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .reset-btn {
+    margin-top: 12px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 6px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.8rem;
+  }
+  .reset-btn:hover { color: var(--text); border-color: #555; }
+
+  .redeem-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+  }
+  .redeem-card h3 {
+    font-size: 1rem;
+    margin-bottom: 10px;
+  }
+  .redeem-row {
+    display: flex;
+    gap: 10px;
+  }
+  .redeem-row input {
+    flex: 1;
+    background: #12141a;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-size: 0.95rem;
+    outline: none;
+  }
+  .redeem-row input:focus {
+    border-color: var(--accent);
+  }
+  .redeem-msg {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    min-height: 20px;
+  }
+  .redeem-msg.success { color: var(--green); }
+  .redeem-msg.error { color: var(--red); }
+
+  .admin-modal {
+    background: var(--card);
+    border: 1px solid #c9a227;
+    border-radius: 20px;
+    padding: 28px 32px;
+    max-width: 480px;
+    width: 92%;
+    text-align: left;
+  }
+  .admin-modal h2 {
+    color: #ffd700;
+    margin-bottom: 6px;
+    font-size: 1.3rem;
+  }
+  .admin-modal .admin-sub {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-bottom: 18px;
+  }
+  .admin-section {
+    margin-bottom: 18px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .admin-section:last-of-type { border-bottom: none; }
+  .admin-section h3 {
+    font-size: 0.95rem;
+    margin-bottom: 10px;
+    color: var(--text);
+  }
+  .admin-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .admin-row select,
+  .admin-row input {
+    background: #12141a;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-size: 0.9rem;
+    outline: none;
+  }
+  .admin-row select { flex: 1; min-width: 140px; }
+  .admin-row input { width: 120px; }
+  .admin-row select:focus,
+  .admin-row input:focus { border-color: #c9a227; }
+  .admin-msg {
+    margin-top: 10px;
+    font-size: 0.85rem;
+    min-height: 18px;
+  }
+  .admin-msg.success { color: var(--green); }
+  .admin-msg.error { color: var(--red); }
+  #adminBtnWrap { display: none; margin-bottom: 16px; }
+
+
+  .garage-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 800px) {
+    .garage-layout { grid-template-columns: 1fr; }
+  }
+  .car-preview {
+    background: radial-gradient(ellipse at center, #1e2430 0%, #12141a 70%);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .car-preview::before {
+    content: '';
+    position: absolute;
+    bottom: 40px;
+    width: 70%;
+    height: 20px;
+    background: rgba(0,0,0,0.35);
+    border-radius: 50%;
+    filter: blur(6px);
+  }
+  .car-svg { width: 220px; height: 120px; position: relative; z-index: 1; transition: filter 0.3s; }
+  .car-label {
+    margin-top: 18px;
+    text-align: center;
+    z-index: 1;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .car-label strong { color: var(--text); display: block; font-size: 1rem; margin-bottom: 4px; }
+  .loadout-slots { display: flex; flex-direction: column; gap: 10px; }
+  .slot-row {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .slot-row .slot-type {
+    width: 90px;
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .slot-row select {
+    flex: 1;
+    background: #12141a;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+  .slot-row select:focus { outline: none; border-color: var(--accent); }
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+    align-items: center;
+  }
+  .filter-bar select, .filter-bar input {
+    background: #12141a;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
+  .filter-bar input { min-width: 140px; }
+  .item-card .fav-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    opacity: 0.5;
+    line-height: 1;
+  }
+  .item-card .fav-btn.on { opacity: 1; }
+  .item-card { position: relative; }
+  .challenge-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .challenge-card h3 { font-size: 1rem; margin-bottom: 4px; }
+  .challenge-card p { font-size: 0.85rem; color: var(--muted); }
+  .challenge-card .reward { color: var(--accent); font-weight: 700; font-size: 0.9rem; }
+  .challenge-card.done { opacity: 0.55; }
+  .level-bar {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .level-bar .lvl { color: var(--accent); font-weight: 800; font-size: 1.1rem; }
+  .xp-track {
+    flex: 1;
+    min-width: 120px;
+    height: 10px;
+    background: #12141a;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .xp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #ffd54f);
+    border-radius: 6px;
+    transition: width 0.3s;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+  }
+  .stat-box .num { font-size: 1.4rem; font-weight: 800; color: var(--accent); }
+  .stat-box .lbl { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+  .opening-spinner {
+    animation: spin 0.8s linear infinite, pulse-glow 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(249,171,0,0.4); }
+    50% { box-shadow: 0 0 30px 8px rgba(249,171,0,0.25); }
+  }
+  .modal.opening-extra h2 { letter-spacing: 1px; }
+  .modal.opening-extra .open-hint { color: var(--muted); font-size: 0.85rem; margin-top: 8px; }
+
+
+  .history-list { max-height: 320px; overflow-y: auto; margin-top: 12px; }
+  .history-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 0.85rem;
+  }
+  .history-row:nth-child(odd) { background: rgba(255,255,255,0.02); }
+  .ach-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 14px; margin-bottom: 8px; display: flex; justify-content: space-between; gap: 10px; align-items: center;
+  }
+  .ach-card.unlocked { border-color: var(--green); }
+  .ach-card h4 { font-size: 0.95rem; margin-bottom: 2px; }
+  .ach-card p { font-size: 0.8rem; color: var(--muted); }
+  .event-badge {
+    display: inline-block; background: linear-gradient(90deg,#ff6d00,#d500f9); color: #fff;
+    font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; margin-left: 6px;
+  }
+  .blueprint-row {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+
+
+  .upg-panel, .market-grid, .battle-setup { margin-top: 8px; }
+  .upg-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 20px; max-width: 520px;
+  }
+  .chance-bar {
+    height: 14px; background: #12141a; border-radius: 8px; overflow: hidden; margin: 12px 0;
+  }
+  .chance-fill {
+    height: 100%; background: linear-gradient(90deg, #ea4335, #f9ab00, #34a853);
+    transition: width 0.3s;
+  }
+  .market-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;
+  }
+  .market-item {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px;
+  }
+  .market-item h4 { margin-bottom: 4px; }
+  .market-item .price { color: var(--accent); font-weight: 700; margin: 8px 0; }
+  .tech-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px;
+  }
+  .tech-node {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px;
+  }
+  .tech-node.owned { border-color: var(--green); }
+  .idle-box {
+    background: linear-gradient(135deg, #1a2438, #1a1d24);
+    border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 16px;
+  }
+  .battle-result {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px; margin-top: 12px;
+  }
+
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">RL <span>Drop</span> Simulator</div>
+  <div class="header-right">
+    <div class="news-box">
+      <strong>NEWS:</strong> NEW: Upgrader, Market, Drop Battles, Tech Tree & Idle earnings!
+    </div>
+    <div class="credits-box">
+      <span>Credits</span>
+      <span class="amount" id="creditsDisplay">10000</span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" data-tab="shop">Shop</button>
+    <button class="tab" data-tab="drops">My Drops</button>
+    <button class="tab" data-tab="inventory">Inventory</button>
+    <button class="tab" data-tab="garage">Garage</button>
+    <button class="tab" data-tab="titles">Titles</button>
+    <button class="tab" data-tab="challenges">Challenges</button>
+    <button class="tab" data-tab="upgrade">Upgrade</button>
+    <button class="tab" data-tab="market">Market</button>
+    <button class="tab" data-tab="battle">Battle</button>
+    <button class="tab" data-tab="lab">Lab</button>
+    <button class="tab" data-tab="tradein">Trade-In</button>
+    <button class="tab" data-tab="achievements">Achievements</button>
+    <button class="tab" data-tab="stats">Stats</button>
+  </div>
+
+  <!-- SHOP -->
+  <div class="panel active" id="shop">
+    <div class="redeem-card">
+      <h3>Redeem Code</h3>
+      <div class="redeem-row">
+        <input type="text" id="redeemInput" placeholder="Enter code..." maxlength="20">
+        <button class="btn btn-primary" onclick="redeemCode()">Redeem</button>
+      </div>
+      <div class="redeem-msg" id="redeemMsg"></div>
+    </div>
+
+    <div id="adminBtnWrap">
+      <button class="btn btn-primary" style="background:#c9a227;color:#111;" onclick="openAdminMenu()">Open Admin Menu</button>
+    </div>
+
+    <div class="section-title">Buy Drops</div>
+    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:14px;">Purchase drops here, then open them in the <strong>My Drops</strong> tab.</p>
+    <div class="crate-grid" id="crateGrid">
+      <!-- Crates will be injected here -->
+    </div>
+  </div>
+
+  <!-- MY DROPS (open owned drops) -->
+  <div class="panel" id="drops">
+    <div class="section-title">Your Unopened Drops</div>
+    <div id="ownedDropsContent"></div>
+  </div>
+
+  <!-- INVENTORY -->
+  <div class="panel" id="inventory">
+    <div id="inventoryContent"></div>
+  </div>
+
+  <!-- TITLES -->
+  <div class="panel" id="titles">
+    <div class="section-title">Your Rank Titles</div>
+    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:14px;">Open Title Drops to collect seasonal rank titles.</p>
+    <div id="titlesContent"></div>
+  </div>
+
+
+  <!-- GARAGE -->
+  <div class="panel" id="garage">
+    <div class="section-title">Garage — Equip Your Items</div>
+    <div class="garage-layout">
+      <div class="car-preview" id="carPreview">
+        <svg class="car-svg" viewBox="0 0 220 100" xmlns="http://www.w3.org/2000/svg">
+          <ellipse id="carShadow" cx="110" cy="88" rx="70" ry="8" fill="rgba(0,0,0,0.4)"/>
+          <rect id="carBody" x="40" y="38" width="140" height="36" rx="10" fill="#4285f4"/>
+          <path id="carCabin" d="M70 38 L90 18 H140 L155 38 Z" fill="#2a5a9a"/>
+          <rect id="carWindow" x="95" y="22" width="40" height="14" rx="3" fill="#7ec8ff" opacity="0.7"/>
+          <circle id="wheelL" cx="70" cy="74" r="14" fill="#222"/>
+          <circle id="wheelL2" cx="70" cy="74" r="7" fill="#888"/>
+          <circle id="wheelR" cx="155" cy="74" r="14" fill="#222"/>
+          <circle id="wheelR2" cx="155" cy="74" r="7" fill="#888"/>
+          <rect id="carBoost" x="20" y="48" width="18" height="14" rx="4" fill="#f9ab00" opacity="0.9"/>
+          <circle id="carTopper" cx="110" cy="14" r="8" fill="#f44292" opacity="0"/>
+        </svg>
+        <div class="car-label" id="carLabel"><strong>Octane</strong>Default loadout</div>
+      </div>
+      <div class="loadout-slots" id="loadoutSlots"></div>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-secondary" onclick="clearLoadout()">Clear Loadout</button>
+      <button class="btn btn-primary" onclick="savePreset()">Save Preset</button>
+      <button class="btn btn-secondary" onclick="loadPreset()">Load Preset</button>
+    </div>
+  </div>
+
+  <!-- CHALLENGES -->
+  <div class="panel" id="challenges">
+    <div class="section-title">Daily Challenges — Free Credits</div>
+    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:14px;">Complete challenges for credits. Resets daily (local time).</p>
+    <div id="challengesContent"></div>
+  </div>
+
+  <!-- ACHIEVEMENTS -->
+  <div class="panel" id="achievements">
+    <div class="section-title">Achievements</div>
+    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:14px;">Permanent goals with credit rewards.</p>
+    <div id="achievementsContent"></div>
+  </div>
+
+  <!-- STATS -->
+  <div class="panel" id="stats">
+    <div class="section-title">Profile & Stats</div>
+    <div class="level-bar" id="levelBar"></div>
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="section-title" style="margin-top:24px;">Pull History</div>
+    <div class="history-list" id="historyList"></div>
+    <div class="section-title" style="margin-top:24px;">Blueprints</div>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:10px;">Craft blueprints into real items with credits.</p>
+    <div id="blueprintsList"></div>
+  </div>
+
+
+  <!-- UPGRADE -->
+  <div class="panel" id="upgrade">
+    <div class="section-title">Item Upgrader</div>
+    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:14px;">Risk an item to try upgrading it to the next rarity. Fail and you lose the item.</p>
+    <div class="upg-card">
+      <div class="admin-row" style="margin-bottom:12px;">
+        <select id="upgradeSelect" style="flex:1;min-width:180px;background:#12141a;border:1px solid var(--border);border-radius:10px;color:var(--text);padding:10px;"></select>
+      </div>
+      <div id="upgradeInfo" style="font-size:0.9rem;color:var(--muted);margin-bottom:8px;">Select an item</div>
+      <div class="chance-bar"><div class="chance-fill" id="upgradeChanceFill" style="width:35%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:14px;">
+        <span>Success chance: <strong id="upgradeChanceText" style="color:var(--accent);">35%</strong></span>
+        <span>Next: <strong id="upgradeNextText">—</strong></span>
+      </div>
+      <button class="btn btn-primary" onclick="doUpgrade()">Upgrade (Risk It)</button>
+      <div class="admin-msg" id="upgradeMsg" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <!-- MARKET -->
+  <div class="panel" id="market">
+    <div class="section-title">Item Market</div>
+    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:14px;">Buy specific items with credits (premium prices).</p>
+    <div class="market-grid" id="marketGrid"></div>
+  </div>
+
+  <!-- BATTLE -->
+  <div class="panel" id="battle">
+    <div class="section-title">Drop Battle vs Bot</div>
+    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:14px;">You and a bot each open the same drop. Highest total sell value wins both items.</p>
+    <div class="admin-row" style="margin-bottom:12px;flex-wrap:wrap;">
+      <select id="battleCrate" style="flex:1;min-width:160px;background:#12141a;border:1px solid var(--border);border-radius:10px;color:var(--text);padding:10px;"></select>
+      <button class="btn btn-primary" onclick="startBattle()">Start Battle (costs 1 drop or buy price)</button>
+    </div>
+    <div id="battleResult"></div>
+  </div>
+
+  <!-- LAB -->
+  <div class="panel" id="lab">
+    <div class="section-title">Lab — Tech, Idle & Tools</div>
+    <div class="idle-box">
+      <h3 style="margin-bottom:6px;">Workshop Idle Earnings</h3>
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:10px;">Earn credits while away. Collect when you return.</p>
+      <div id="idleInfo" style="margin-bottom:10px;">—</div>
+      <button class="btn btn-green" onclick="collectIdle()">Collect Idle Credits</button>
+    </div>
+    <div class="section-title">Tech Tree</div>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:12px;">Spend credits for permanent bonuses.</p>
+    <div class="tech-grid" id="techGrid"></div>
+    <div class="section-title" style="margin-top:24px;">Simulate Openings</div>
+    <div class="admin-row" style="flex-wrap:wrap;margin-bottom:10px;">
+      <select id="simCrate" style="flex:1;min-width:140px;background:#12141a;border:1px solid var(--border);border-radius:10px;color:var(--text);padding:10px;"></select>
+      <input type="number" id="simCount" value="100" min="1" max="1000" style="width:100px;background:#12141a;border:1px solid var(--border);border-radius:10px;color:var(--text);padding:10px;">
+      <button class="btn btn-secondary" onclick="simulateOpens()">Simulate (free)</button>
+    </div>
+    <pre id="simResult" style="background:#12141a;border:1px solid var(--border);border-radius:12px;padding:14px;font-size:0.85rem;white-space:pre-wrap;color:var(--muted);"></pre>
+  </div>
+
+  <!-- TRADE-IN -->
+  <div class="panel" id="tradein">
+    <div class="section-title">Trade 5 items of the same rarity for 1 higher rarity item</div>
+    <div class="trade-list" id="tradeList"></div>
+  </div>
+
+  <div class="footer-note">
+    Fan-made simulator. Not affiliated with Rocket League, Psyonix, or Epic Games.<br>
+    Opening drops does not give real items or credits. · v3.2 upgrade · market · battle · lab
+    <br>
+    <button class="reset-btn" onclick="resetGame()">Reset All Progress</button>
+  </div>
+</div>
+
+<!-- Admin Menu Overlay -->
+<div class="overlay" id="adminOverlay">
+  <div class="admin-modal">
+    <h2>Admin Menu</h2>
+    <div class="admin-sub">Give yourself drops or credits</div>
+
+    <div class="admin-section">
+      <h3>Give Drops</h3>
+      <div class="admin-row">
+        <select id="adminDropSelect"></select>
+        <input type="number" id="adminDropQty" value="1" min="1" max="1000000" placeholder="Amount">
+        <button class="btn btn-primary" onclick="adminGiveDrops()">Give Drops</button>
+      </div>
+      <div class="admin-msg" id="adminDropMsg"></div>
+    </div>
+
+    <div class="admin-section">
+      <h3>Give Credits</h3>
+      <div class="admin-row">
+        <input type="number" id="adminCreditAmt" value="1000000" min="1" placeholder="Credits">
+        <button class="btn btn-primary" onclick="adminGiveCredits()">Give Credits</button>
+      </div>
+      <div class="admin-msg" id="adminCreditMsg"></div>
+    </div>
+
+    <div class="admin-section">
+      <h3>Set Level / XP</h3>
+      <div class="admin-row">
+        <input type="number" id="adminLevel" value="1" min="1" max="999999" placeholder="Level">
+        <input type="number" id="adminXP" value="0" min="0" max="999999999" placeholder="XP">
+        <button class="btn btn-primary" onclick="adminSetLevel()">Set Level</button>
+      </div>
+      <div class="admin-msg" id="adminLevelMsg"></div>
+    </div>
+
+    <button class="btn btn-secondary" onclick="closeAdminMenu()" style="margin-top:8px;">Close</button>
+  </div>
+</div>
+
+<!-- Opening Overlay -->
+<div class="overlay" id="openingOverlay">
+  <div class="modal opening-extra">
+    <div class="opening-spinner"></div>
+    <h2>Opening Drop...</h2>
+    <div class="open-hint">Revealing your item...</div>
+  </div>
+</div>
+
+<!-- Result Overlay -->
+<div class="overlay" id="resultOverlay">
+  <div class="modal">
+    <h2>You got!</h2>
+    <div class="item-result" id="resultName">Item Name</div>
+    <div class="rarity-result" id="resultRarity">Rare</div>
+    <div class="extra" id="resultPainted" style="display:none;"></div>
+    <div class="extra" id="resultCertified" style="display:none;">Certified</div>
+    <button class="btn btn-primary" onclick="closeResult()">Nice!</button>
+  </div>
+</div>
+
+<script>
+// ===================== DATA =====================
+var RARITIES = ['Common', 'Uncommon', 'Rare', 'Very Rare', 'Import', 'Exotic', 'Black Market', 'Beta', 'Zomba', 'Dragon', 'Nova', 'Title'];
+
+var RARITY_CLASS = {
+  'Common': 'r-common',
+  'Uncommon': 'r-uncommon',
+  'Rare': 'r-rare',
+  'Very Rare': 'r-veryrare',
+  'Import': 'r-import',
+  'Exotic': 'r-exotic',
+  'Black Market': 'r-blackmarket',
+  'Beta': 'r-beta',
+  'Zomba': 'r-zomba',
+  'Dragon': 'r-dragon',
+  'Nova': 'r-nova',
+  'Title': 'r-title'
+};
+
+var PAINTS = ['Crimson', 'Sky Blue', 'Lime', 'Purple', 'Orange', 'Black', 'White', 'Pink', 'Saffron', 'Forest Green', 'Cobalt', 'Burnt Sienna'];
+
+var ITEM_POOL = {
+  'Common': [
+    { name: 'Basic Trail', type: 'Trail' },
+    { name: 'Standard Antenna', type: 'Topper' },
+    { name: 'Simple Decal', type: 'Decal' }
+  ],
+  'Uncommon': [
+    { name: 'Cloudburst', type: 'Boost' },
+    { name: 'Holographic', type: 'Trail' },
+    { name: 'Corkscrew', type: 'Wheel' }
+  ],
+  'Rare': [
+    { name: 'Maverick', type: 'Body' },
+    { name: 'Hiro', type: 'Wheel' },
+    { name: 'Sparkles', type: 'Boost' },
+    { name: 'Lightning', type: 'Trail' },
+    { name: 'Starlight', type: 'Topper' }
+  ],
+  'Very Rare': [
+    { name: 'Octane ZSR', type: 'Body' },
+    { name: 'FSL', type: 'Wheel' },
+    { name: 'Hexphase', type: 'Boost' },
+    { name: 'Tachyon', type: 'Trail' },
+    { name: 'Breakout Type-S', type: 'Body' }
+  ],
+  'Import': [
+    { name: 'Dominus GT', type: 'Body' },
+    { name: 'Voltaic', type: 'Wheel' },
+    { name: 'Standard', type: 'Trail' },
+    { name: 'Endo', type: 'Body' },
+    { name: 'Animus GP', type: 'Body' }
+  ],
+  'Exotic': [
+    { name: 'Draco', type: 'Wheel' },
+    { name: 'Zomba', type: 'Wheel' },
+    { name: 'Apex', type: 'Wheel' },
+    { name: 'Roulette', type: 'Wheel' },
+    { name: 'Kalos', type: 'Wheel' }
+  ],
+  'Black Market': [
+    { name: 'Dissolver', type: 'Decal' },
+    { name: 'Interstellar', type: 'Decal' },
+    { name: 'Heatwave', type: 'Decal' },
+    { name: 'Fire God', type: 'Decal' },
+    { name: 'Mainframe', type: 'Decal' },
+    { name: '20XX', type: 'Decal' },
+    { name: 'Bubbly', type: 'Decal' },
+    { name: 'Streamline', type: 'Decal' }
+  ],
+  'Title': [
+    { name: 'S1 Bronze', type: 'Title' },
+    { name: 'S1 Silver', type: 'Title' },
+    { name: 'S1 Gold', type: 'Title' },
+    { name: 'S1 Platinum', type: 'Title' },
+    { name: 'S1 Diamond', type: 'Title' },
+    { name: 'S1 Champ', type: 'Title' },
+    { name: 'S1 GC', type: 'Title' },
+    { name: 'S1 SSL', type: 'Title' },
+    { name: 'S2 Bronze', type: 'Title' },
+    { name: 'S2 Silver', type: 'Title' },
+    { name: 'S2 Gold', type: 'Title' },
+    { name: 'S2 Platinum', type: 'Title' },
+    { name: 'S2 Diamond', type: 'Title' },
+    { name: 'S2 Champ', type: 'Title' },
+    { name: 'S2 GC', type: 'Title' },
+    { name: 'S2 SSL', type: 'Title' },
+    { name: 'S3 Bronze', type: 'Title' },
+    { name: 'S3 Silver', type: 'Title' },
+    { name: 'S3 Gold', type: 'Title' },
+    { name: 'S3 Platinum', type: 'Title' },
+    { name: 'S3 Diamond', type: 'Title' },
+    { name: 'S3 Champ', type: 'Title' },
+    { name: 'S3 GC', type: 'Title' },
+    { name: 'S3 SSL', type: 'Title' },
+    { name: 'S4 Bronze', type: 'Title' },
+    { name: 'S4 Silver', type: 'Title' },
+    { name: 'S4 Gold', type: 'Title' },
+    { name: 'S4 Platinum', type: 'Title' },
+    { name: 'S4 Diamond', type: 'Title' },
+    { name: 'S4 Champ', type: 'Title' },
+    { name: 'S4 GC', type: 'Title' },
+    { name: 'S4 SSL', type: 'Title' },
+    { name: 'S5 Bronze', type: 'Title' },
+    { name: 'S5 Silver', type: 'Title' },
+    { name: 'S5 Gold', type: 'Title' },
+    { name: 'S5 Platinum', type: 'Title' },
+    { name: 'S5 Diamond', type: 'Title' },
+    { name: 'S5 Champ', type: 'Title' },
+    { name: 'S5 GC', type: 'Title' },
+    { name: 'S5 SSL', type: 'Title' },
+    { name: 'S6 Bronze', type: 'Title' },
+    { name: 'S6 Silver', type: 'Title' },
+    { name: 'S6 Gold', type: 'Title' },
+    { name: 'S6 Platinum', type: 'Title' },
+    { name: 'S6 Diamond', type: 'Title' },
+    { name: 'S6 Champ', type: 'Title' },
+    { name: 'S6 GC', type: 'Title' },
+    { name: 'S6 SSL', type: 'Title' },
+    { name: 'S7 Bronze', type: 'Title' },
+    { name: 'S7 Silver', type: 'Title' },
+    { name: 'S7 Gold', type: 'Title' },
+    { name: 'S7 Platinum', type: 'Title' },
+    { name: 'S7 Diamond', type: 'Title' },
+    { name: 'S7 Champ', type: 'Title' },
+    { name: 'S7 GC', type: 'Title' },
+    { name: 'S7 SSL', type: 'Title' },
+    { name: 'S8 Bronze', type: 'Title' },
+    { name: 'S8 Silver', type: 'Title' },
+    { name: 'S8 Gold', type: 'Title' },
+    { name: 'S8 Platinum', type: 'Title' },
+    { name: 'S8 Diamond', type: 'Title' },
+    { name: 'S8 Champ', type: 'Title' },
+    { name: 'S8 GC', type: 'Title' },
+    { name: 'S8 SSL', type: 'Title' },
+    { name: 'S9 Bronze', type: 'Title' },
+    { name: 'S9 Silver', type: 'Title' },
+    { name: 'S9 Gold', type: 'Title' },
+    { name: 'S9 Platinum', type: 'Title' },
+    { name: 'S9 Diamond', type: 'Title' },
+    { name: 'S9 Champ', type: 'Title' },
+    { name: 'S9 GC', type: 'Title' },
+    { name: 'S9 SSL', type: 'Title' },
+    { name: 'S10 Bronze', type: 'Title' },
+    { name: 'S10 Silver', type: 'Title' },
+    { name: 'S10 Gold', type: 'Title' },
+    { name: 'S10 Platinum', type: 'Title' },
+    { name: 'S10 Diamond', type: 'Title' },
+    { name: 'S10 Champ', type: 'Title' },
+    { name: 'S10 GC', type: 'Title' },
+    { name: 'S10 SSL', type: 'Title' },
+    { name: 'S11 Bronze', type: 'Title' },
+    { name: 'S11 Silver', type: 'Title' },
+    { name: 'S11 Gold', type: 'Title' },
+    { name: 'S11 Platinum', type: 'Title' },
+    { name: 'S11 Diamond', type: 'Title' },
+    { name: 'S11 Champ', type: 'Title' },
+    { name: 'S11 GC', type: 'Title' },
+    { name: 'S11 SSL', type: 'Title' },
+    { name: 'S12 Bronze', type: 'Title' },
+    { name: 'S12 Silver', type: 'Title' },
+    { name: 'S12 Gold', type: 'Title' },
+    { name: 'S12 Platinum', type: 'Title' },
+    { name: 'S12 Diamond', type: 'Title' },
+    { name: 'S12 Champ', type: 'Title' },
+    { name: 'S12 GC', type: 'Title' },
+    { name: 'S12 SSL', type: 'Title' },
+    { name: 'S13 Bronze', type: 'Title' },
+    { name: 'S13 Silver', type: 'Title' },
+    { name: 'S13 Gold', type: 'Title' },
+    { name: 'S13 Platinum', type: 'Title' },
+    { name: 'S13 Diamond', type: 'Title' },
+    { name: 'S13 Champ', type: 'Title' },
+    { name: 'S13 GC', type: 'Title' },
+    { name: 'S13 SSL', type: 'Title' },
+    { name: 'S14 Bronze', type: 'Title' },
+    { name: 'S14 Silver', type: 'Title' },
+    { name: 'S14 Gold', type: 'Title' },
+    { name: 'S14 Platinum', type: 'Title' },
+    { name: 'S14 Diamond', type: 'Title' },
+    { name: 'S14 Champ', type: 'Title' },
+    { name: 'S14 GC', type: 'Title' },
+    { name: 'S14 SSL', type: 'Title' },
+    { name: 'S15 Bronze', type: 'Title' },
+    { name: 'S15 Silver', type: 'Title' },
+    { name: 'S15 Gold', type: 'Title' },
+    { name: 'S15 Platinum', type: 'Title' },
+    { name: 'S15 Diamond', type: 'Title' },
+    { name: 'S15 Champ', type: 'Title' },
+    { name: 'S15 GC', type: 'Title' },
+    { name: 'S15 SSL', type: 'Title' },
+    { name: 'S16 Bronze', type: 'Title' },
+    { name: 'S16 Silver', type: 'Title' },
+    { name: 'S16 Gold', type: 'Title' },
+    { name: 'S16 Platinum', type: 'Title' },
+    { name: 'S16 Diamond', type: 'Title' },
+    { name: 'S16 Champ', type: 'Title' },
+    { name: 'S16 GC', type: 'Title' },
+    { name: 'S16 SSL', type: 'Title' },
+    { name: 'S17 Bronze', type: 'Title' },
+    { name: 'S17 Silver', type: 'Title' },
+    { name: 'S17 Gold', type: 'Title' },
+    { name: 'S17 Platinum', type: 'Title' },
+    { name: 'S17 Diamond', type: 'Title' },
+    { name: 'S17 Champ', type: 'Title' },
+    { name: 'S17 GC', type: 'Title' },
+    { name: 'S17 SSL', type: 'Title' },
+    { name: 'S18 Bronze', type: 'Title' },
+    { name: 'S18 Silver', type: 'Title' },
+    { name: 'S18 Gold', type: 'Title' },
+    { name: 'S18 Platinum', type: 'Title' },
+    { name: 'S18 Diamond', type: 'Title' },
+    { name: 'S18 Champ', type: 'Title' },
+    { name: 'S18 GC', type: 'Title' },
+    { name: 'S18 SSL', type: 'Title' },
+    { name: 'S19 Bronze', type: 'Title' },
+    { name: 'S19 Silver', type: 'Title' },
+    { name: 'S19 Gold', type: 'Title' },
+    { name: 'S19 Platinum', type: 'Title' },
+    { name: 'S19 Diamond', type: 'Title' },
+    { name: 'S19 Champ', type: 'Title' },
+    { name: 'S19 GC', type: 'Title' },
+    { name: 'S19 SSL', type: 'Title' },
+    { name: 'S20 Bronze', type: 'Title' },
+    { name: 'S20 Silver', type: 'Title' },
+    { name: 'S20 Gold', type: 'Title' },
+    { name: 'S20 Platinum', type: 'Title' },
+    { name: 'S20 Diamond', type: 'Title' },
+    { name: 'S20 Champ', type: 'Title' },
+    { name: 'S20 GC', type: 'Title' },
+    { name: 'S20 SSL', type: 'Title' },
+    { name: 'S21 Bronze', type: 'Title' },
+    { name: 'S21 Silver', type: 'Title' },
+    { name: 'S21 Gold', type: 'Title' },
+    { name: 'S21 Platinum', type: 'Title' },
+    { name: 'S21 Diamond', type: 'Title' },
+    { name: 'S21 Champ', type: 'Title' },
+    { name: 'S21 GC', type: 'Title' },
+    { name: 'S21 SSL', type: 'Title' },
+    { name: 'S22 Bronze', type: 'Title' },
+    { name: 'S22 Silver', type: 'Title' },
+    { name: 'S22 Gold', type: 'Title' },
+    { name: 'S22 Platinum', type: 'Title' },
+    { name: 'S22 Diamond', type: 'Title' },
+    { name: 'S22 Champ', type: 'Title' },
+    { name: 'S22 GC', type: 'Title' },
+    { name: 'S22 SSL', type: 'Title' },
+    { name: 'S23 Bronze', type: 'Title' },
+    { name: 'S23 Silver', type: 'Title' },
+    { name: 'S23 Gold', type: 'Title' },
+    { name: 'S23 Platinum', type: 'Title' },
+    { name: 'S23 Diamond', type: 'Title' },
+    { name: 'S23 Champ', type: 'Title' },
+    { name: 'S23 GC', type: 'Title' },
+    { name: 'S23 SSL', type: 'Title' },
+    { name: 'S24 Bronze', type: 'Title' },
+    { name: 'S24 Silver', type: 'Title' },
+    { name: 'S24 Gold', type: 'Title' },
+    { name: 'S24 Platinum', type: 'Title' },
+    { name: 'S24 Diamond', type: 'Title' },
+    { name: 'S24 Champ', type: 'Title' },
+    { name: 'S24 GC', type: 'Title' },
+    { name: 'S24 SSL', type: 'Title' }
+  ],
+  'Beta': [
+    { name: 'Alpha Boost', type: 'Boost' },
+    { name: 'Dev Boost', type: 'Boost' },
+    { name: 'Goldstone Wheels', type: 'Wheel' },
+    { name: 'Gold Nugget', type: 'Antenna' },
+    { name: 'Alpha Hat', type: 'Topper' }
+  ],
+  'Zomba': [
+    { name: 'Zomba', type: 'Wheel' },
+    { name: 'Black Zomba', type: 'Wheel' },
+    { name: 'Titanium White Zomba', type: 'Wheel' },
+    { name: 'Grey Zomba', type: 'Wheel' },
+    { name: 'Crimson Zomba', type: 'Wheel' },
+    { name: 'Pink Zomba', type: 'Wheel' },
+    { name: 'Cobalt Zomba', type: 'Wheel' },
+    { name: 'Sky Blue Zomba', type: 'Wheel' },
+    { name: 'Burnt Sienna Zomba', type: 'Wheel' },
+    { name: 'Saffron Zomba', type: 'Wheel' },
+    { name: 'Lime Zomba', type: 'Wheel' },
+    { name: 'Forest Green Zomba', type: 'Wheel' },
+    { name: 'Orange Zomba', type: 'Wheel' },
+    { name: 'Purple Zomba', type: 'Wheel' }
+  ],
+  'Dragon': [
+    { name: 'Dueling Dragons', type: 'Goal Explosion' },
+    { name: 'Black Dueling Dragons', type: 'Goal Explosion' },
+    { name: 'Titanium White Dueling Dragons', type: 'Goal Explosion' },
+    { name: 'Grey Dueling Dragons', type: 'Goal Explosion' },
+    { name: 'Crimson Dueling Dragons', type: 'Goal Explosion' },
+    { name: 'Pink Dueling Dragons', type: 'Goal Explosion' },
+    { name: 'Cobalt Dueling Dragons', type: 'Goal Explosion' },
+    { name: 'Sky Blue Dueling Dragons', type: 'Goal Explosion' },
+    { name: 'Burnt Sienna Dueling Dragons', type: 'Goal Explosion' },
+    { name: 'Saffron Dueling Dragons', type: 'Goal Explosion' },
+    { name: 'Lime Dueling Dragons', type: 'Goal Explosion' },
+    { name: 'Forest Green Dueling Dragons', type: 'Goal Explosion' },
+    { name: 'Orange Dueling Dragons', type: 'Goal Explosion' },
+    { name: 'Purple Dueling Dragons', type: 'Goal Explosion' }
+  ],
+  'Nova': [
+    { name: 'Ronin GXT', type: 'Body' },
+    { name: 'Mako', type: 'Body' },
+    { name: 'Primo', type: 'Body' },
+    { name: 'Lunation', type: 'Decal' },
+    { name: 'Neural Network', type: 'Decal' },
+    { name: 'Constella', type: 'Decal' },
+    { name: 'Brainfog', type: 'Decal' },
+    { name: 'Conello', type: 'Wheel' },
+    { name: 'Avalanche', type: 'Decal' },
+    { name: 'Neuronetwork', type: 'Decal' },
+    { name: 'Glowex Holographics', type: 'Decal' },
+    { name: 'Tririccast Holographics', type: 'Decal' },
+    { name: 'Floret Infinite', type: 'Decal' },
+    { name: 'Estustrali Prismatic', type: 'Decal' },
+    { name: 'Interchiller', type: 'Boost' },
+    { name: 'Scrimmy Radiance', type: 'Boost' },
+    { name: 'LFosec', type: 'Trail' },
+    { name: 'Brain Fog', type: 'Boost' },
+    { name: 'Fissure', type: 'Trail' },
+    { name: 'For Sure', type: 'Trail' }
+  ]
+};
+
+var CRATES = [
+  {
+    id: 'standard',
+    name: 'Sport Drop',
+    price: 100,
+    desc: 'Basic drop with normal odds',
+    table: { 'Rare': 0.55, 'Very Rare': 0.28, 'Import': 0.12, 'Exotic': 0.04, 'Black Market': 0.01 },
+    paintedChance: 0.25,
+    certifiedChance: 0.08
+  },
+  {
+    id: 'title',
+    name: 'Title Drop',
+    price: 200,
+    desc: 'Season rank titles like S24 SSL, S24 Platinum, and more',
+    table: { 'Title': 1.0 },
+    paintedChance: 0.0,
+    certifiedChance: 0.0
+  },
+  {
+    id: 'tournament',
+    name: 'Special Drop',
+    price: 200,
+    desc: 'Better odds than Sport Drop',
+    table: { 'Rare': 0.35, 'Very Rare': 0.35, 'Import': 0.20, 'Exotic': 0.08, 'Black Market': 0.02 },
+    paintedChance: 0.35,
+    certifiedChance: 0.12
+  },
+  {
+    id: 'premium',
+    name: 'Deluxe Drop',
+    price: 350,
+    desc: 'Solid mid-tier odds',
+    table: { 'Very Rare': 0.45, 'Import': 0.30, 'Exotic': 0.18, 'Black Market': 0.07 },
+    paintedChance: 0.40,
+    certifiedChance: 0.15
+  },
+  {
+    id: 'golden',
+    name: 'Import Drop',
+    price: 500,
+    desc: 'Higher chance of painted & certified items',
+    table: { 'Very Rare': 0.40, 'Import': 0.30, 'Exotic': 0.20, 'Black Market': 0.10 },
+    paintedChance: 0.55,
+    certifiedChance: 0.25
+  },
+  {
+    id: 'zomba',
+    name: 'Zomba Drop',
+    price: 1000,
+    desc: 'All Zomba wheels — every paint including TW, Black, Crimson & more',
+    table: { 'Zomba': 1.0 },
+    paintedChance: 0.0,
+    certifiedChance: 0.0
+  },
+  {
+    id: 'beta',
+    name: 'Beta Drop',
+    price: 5000,
+    desc: 'Exclusive Beta items: Alpha Boost, Dev Boost, Goldstone Wheels, Gold Nugget & Alpha Hat',
+    table: { 'Beta': 1.0 },
+    paintedChance: 0.0,
+    certifiedChance: 0.0
+  },
+  {
+    id: 'dragon',
+    name: 'Dragon Drop',
+    price: 10000,
+    desc: 'All Dueling Dragons goal explosions — every paint',
+    table: { 'Dragon': 1.0 },
+    paintedChance: 0.0,
+    certifiedChance: 0.0
+  },
+  {
+    id: 'nova',
+    name: 'Nova Drop',
+    price: 20000,
+    desc: 'Nova series: Ronin GXT, Mako, Primo, Neural Network, Constella, and more',
+    table: { 'Nova': 1.0 },
+    paintedChance: 0.15,
+    certifiedChance: 0.08
+  }
+];
+
+// Seasonal / event crates (shown only when active)
+var EVENT_CRATES = [
+  {
+    id: 'halloween',
+    name: 'Halloween Drop',
+    price: 400,
+    desc: 'Spooky limited event — higher Exotic & Black Market odds',
+    table: { 'Very Rare': 0.30, 'Import': 0.28, 'Exotic': 0.28, 'Black Market': 0.14 },
+    paintedChance: 0.50,
+    certifiedChance: 0.20,
+    months: [10],
+    event: true
+  },
+  {
+    id: 'winter',
+    name: 'Frosty Drop',
+    price: 400,
+    desc: 'Winter event crate — painted-heavy rewards',
+    table: { 'Very Rare': 0.32, 'Import': 0.30, 'Exotic': 0.26, 'Black Market': 0.12 },
+    paintedChance: 0.60,
+    certifiedChance: 0.18,
+    months: [12, 1],
+    event: true
+  },
+  {
+    id: 'anniversary',
+    name: 'Anniversary Golden',
+    price: 750,
+    desc: 'Celebration crate — boosted Black Market chance',
+    table: { 'Import': 0.30, 'Exotic': 0.35, 'Black Market': 0.25, 'Nova': 0.10 },
+    paintedChance: 0.45,
+    certifiedChance: 0.22,
+    months: [7],
+    event: true
+  },
+  {
+    id: 'rlcs',
+    name: 'RLCS Fan Crate',
+    price: 500,
+    desc: 'Esports-inspired rewards with strong mid-high odds',
+    table: { 'Very Rare': 0.25, 'Import': 0.30, 'Exotic': 0.30, 'Black Market': 0.15 },
+    paintedChance: 0.40,
+    certifiedChance: 0.20,
+    months: [3, 6, 9, 11],
+    event: true
+  }
+];
+
+function getActiveEventCrates() {
+  var month = new Date().getMonth() + 1;
+  var active = [];
+  for (var i = 0; i < EVENT_CRATES.length; i++) {
+    var ec = EVENT_CRATES[i];
+    if (ec.months && ec.months.indexOf(month) !== -1) active.push(ec);
+  }
+  // Always show at least one rotating event so the feature is visible year-round for testing
+  if (active.length === 0) {
+    active.push(EVENT_CRATES[month % EVENT_CRATES.length]);
+  }
+  return active;
+}
+
+function allCrates() {
+  return CRATES.concat(getActiveEventCrates());
+}
+
+// ===================== STATE =====================
+// ownedDrops is a map: { crateId: count }  e.g. { beta: 342, standard: 5 }
+var player = {
+  credits: 10000,
+  inventory: [],
+  ownedDrops: {},
+  lastDaily: null,
+  adminUnlocked: false,
+  loadout: { Body: null, Wheel: null, Boost: null, Trail: null, 'Goal Explosion': null, Topper: null, Antenna: null },
+  preset: null,
+  favorites: {},
+  xp: 0,
+  level: 1,
+  stats: { openings: 0, creditsSpent: 0, creditsEarned: 0 },
+  challenges: {},
+  challengeDay: null,
+  pity: 0,
+  history: [],
+  achievements: {},
+  blueprints: [],
+  tech: {},
+  lastIdleCollect: null
+};
+
+function migrateOwnedDrops(raw) {
+  // Convert old array format to count map
+  if (!raw) return {};
+  if (Array.isArray(raw)) {
+    var map = {};
+    for (var i = 0; i < raw.length; i++) {
+      var id = raw[i].crateId || raw[i].id;
+      if (!id) continue;
+      map[id] = (map[id] || 0) + 1;
+    }
+    return map;
+  }
+  if (typeof raw === 'object') return raw;
+  return {};
+}
+
+function totalOwnedDrops() {
+  var t = 0;
+  for (var k in player.ownedDrops) {
+    if (player.ownedDrops.hasOwnProperty(k)) t += player.ownedDrops[k];
+  }
+  return t;
+}
+
+function load() {
+  try {
+    var raw = localStorage.getItem('rlDropSim');
+    if (raw) {
+      var data = JSON.parse(raw);
+      if (typeof data.credits === 'number') player.credits = data.credits;
+      if (Array.isArray(data.inventory)) player.inventory = data.inventory;
+      player.ownedDrops = migrateOwnedDrops(data.ownedDrops);
+      if (data.lastDaily) player.lastDaily = data.lastDaily;
+      if (data.adminUnlocked) player.adminUnlocked = true;
+      if (data.loadout) player.loadout = data.loadout;
+      if (data.preset) player.preset = data.preset;
+      if (data.favorites) player.favorites = data.favorites;
+      if (typeof data.xp === 'number') player.xp = data.xp;
+      if (typeof data.level === 'number') player.level = data.level;
+      if (data.stats) player.stats = data.stats;
+      if (data.challenges) player.challenges = data.challenges;
+      if (data.challengeDay) player.challengeDay = data.challengeDay;
+      if (typeof data.pity === 'number') player.pity = data.pity;
+      if (Array.isArray(data.history)) player.history = data.history;
+      if (data.achievements) player.achievements = data.achievements;
+      if (Array.isArray(data.blueprints)) player.blueprints = data.blueprints;
+      if (data.tech) player.tech = data.tech;
+      if (data.lastIdleCollect) player.lastIdleCollect = data.lastIdleCollect;
+      if (!player.lastIdleCollect) player.lastIdleCollect = Date.now();
+    }
+  } catch (e) {
+    console.log('Load error', e);
+  }
+  if (!player.lastIdleCollect) player.lastIdleCollect = Date.now();
+  ensureChallengeDay();
+  updateUI();
+  updateAdminButton();
+}
+
+function save() {
+  try {
+    localStorage.setItem('rlDropSim', JSON.stringify(player));
+  } catch (e) {
+    console.log('Save error', e);
+    alert('Warning: could not save (storage may be full).');
+  }
+}
+
+function resetGame() {
+  if (confirm('Reset all credits, drops, and inventory?')) {
+    player = { credits: 10000, inventory: [], ownedDrops: {}, lastDaily: null, adminUnlocked: false, loadout: { Body: null, Wheel: null, Boost: null, Trail: null, 'Goal Explosion': null, Topper: null, Antenna: null }, preset: null, favorites: {}, xp: 0, level: 1, stats: { openings: 0, creditsSpent: 0, creditsEarned: 0 }, challenges: {}, challengeDay: null, pity: 0, history: [], achievements: {}, blueprints: [], tech: {}, lastIdleCollect: Date.now() };
+    save();
+    updateUI();
+  }
+}
+
+// ===================== HELPERS =====================
+function uid() {
+  return 'id-' + Date.now() + '-' + Math.floor(Math.random() * 1000000);
+}
+
+function weightedRandom(table) {
+  var entries = Object.keys(table).map(function(k) {
+    return [k, table[k]];
+  });
+  var total = 0;
+  for (var i = 0; i < entries.length; i++) total += entries[i][1];
+  var r = Math.random() * total;
+  for (var j = 0; j < entries.length; j++) {
+    if (r < entries[j][1]) return entries[j][0];
+    r -= entries[j][1];
+  }
+  return entries[0][0];
+}
+
+function generateItem(crate) {
+  var table = crate.table;
+  // Soft pity: after 40 opens without BM/Exotic on mixed crates, boost high rarities
+  var mixed = crate.table['Black Market'] || crate.table['Exotic'];
+  var pityThreshold = techBonus('pity') || 40;
+  if (mixed && (player.pity || 0) >= pityThreshold) {
+    table = {};
+    for (var k in crate.table) if (crate.table.hasOwnProperty(k)) table[k] = crate.table[k];
+    if (table['Black Market']) table['Black Market'] = Math.min(0.5, table['Black Market'] * 3);
+    if (table['Exotic']) table['Exotic'] = Math.min(0.5, table['Exotic'] * 2);
+  }
+
+  var rarity = weightedRandom(table);
+  var pool = ITEM_POOL[rarity] || ITEM_POOL['Rare'];
+  if (!pool || pool.length === 0) pool = ITEM_POOL['Rare'];
+  var base = pool[Math.floor(Math.random() * pool.length)];
+  var isPainted = Math.random() < (crate.paintedChance + techBonus('paint'));
+  var paint = isPainted ? PAINTS[Math.floor(Math.random() * PAINTS.length)] : null;
+  var isCertified = Math.random() < crate.certifiedChance;
+
+  var series = 'Standard';
+  if (crate.id === 'golden') series = 'Import';
+  else if (crate.id === 'beta') series = 'Beta';
+  else if (crate.id === 'zomba') series = 'Zomba';
+  else if (crate.id === 'dragon') series = 'Dragon';
+  else if (crate.id === 'nova') series = 'Nova';
+  else if (crate.id === 'title') series = 'Title';
+  else if (crate.event) series = 'Event';
+
+  // Update pity
+  if (mixed) {
+    if (rarity === 'Black Market' || rarity === 'Exotic') player.pity = 0;
+    else player.pity = (player.pity || 0) + 1;
+  }
+
+  return {
+    id: uid(),
+    name: base.name,
+    type: base.type,
+    rarity: rarity,
+    isPainted: isPainted,
+    paint: paint,
+    isCertified: isCertified,
+    series: series
+  };
+}
+
+function logPull(crate, item) {
+  if (!player.history) player.history = [];
+  player.history.unshift({
+    t: Date.now(),
+    crate: crate.name,
+    name: item.name,
+    rarity: item.rarity,
+    painted: item.isPainted ? item.paint : null,
+    certified: !!item.isCertified
+  });
+  if (player.history.length > 100) player.history = player.history.slice(0, 100);
+}
+
+function maybeBlueprint(crate, item) {
+  // 12% chance on non-special mixed crates to also get a blueprint of the item
+  if (crate.event) return;
+  if (crate.table && (crate.table['Beta'] || crate.table['Zomba'] || crate.table['Dragon'] || crate.table['Nova'] || crate.table['Title'])) return;
+  if (Math.random() > 0.12) return;
+  if (!player.blueprints) player.blueprints = [];
+  player.blueprints.push({
+    id: uid(),
+    name: item.name,
+    type: item.type,
+    rarity: item.rarity,
+    craftCost: (SELL_PRICES[item.rarity] || 50) * 8
+  });
+}
+
+var ACHIEVEMENT_DEFS = [
+  { id: 'open10', label: 'Getting Started', desc: 'Open 10 drops', check: function(){ return (player.stats.openings||0) >= 10; }, reward: 200 },
+  { id: 'open100', label: 'Grinder', desc: 'Open 100 drops', check: function(){ return (player.stats.openings||0) >= 100; }, reward: 1500 },
+  { id: 'open1000', label: 'Drop Machine', desc: 'Open 1,000 drops', check: function(){ return (player.stats.openings||0) >= 1000; }, reward: 10000 },
+  { id: 'bm1', label: 'Black Market!', desc: 'Own a Black Market item', check: function(){ return countByRarity('Black Market') >= 1; }, reward: 500 },
+  { id: 'bm10', label: 'BM Collector', desc: 'Own 10 Black Market items', check: function(){ return countByRarity('Black Market') >= 10; }, reward: 5000 },
+  { id: 'zomba5', label: 'Zomba Fan', desc: 'Own 5 Zomba items', check: function(){ return countByRarity('Zomba') >= 5; }, reward: 2000 },
+  { id: 'dragon1', label: 'Dragon Tamer', desc: 'Own a Dragon item', check: function(){ return countByRarity('Dragon') >= 1; }, reward: 3000 },
+  { id: 'level10', label: 'Rising Star', desc: 'Reach level 10', check: function(){ return (player.level||1) >= 10; }, reward: 1000 },
+  { id: 'level50', label: 'Veteran', desc: 'Reach level 50', check: function(){ return (player.level||1) >= 50; }, reward: 8000 },
+  { id: 'rich', label: 'Credit Whale', desc: 'Hold 1,000,000 credits at once', check: function(){ return player.credits >= 1000000; }, reward: 5000 },
+  { id: 'trade10', label: 'Trader', desc: 'Complete 10 trade-ins', check: function(){ return (player.stats.trades||0) >= 10; }, reward: 1500 },
+  { id: 'fav5', label: 'Favorites', desc: 'Star 5 different items', check: function(){ var n=0; for (var k in player.favorites) if(player.favorites[k]) n++; return n>=5; }, reward: 300 }
+];
+
+function checkAchievements() {
+  if (!player.achievements) player.achievements = {};
+  var unlocked = [];
+  for (var i = 0; i < ACHIEVEMENT_DEFS.length; i++) {
+    var a = ACHIEVEMENT_DEFS[i];
+    if (player.achievements[a.id]) continue;
+    try {
+      if (a.check()) {
+        player.achievements[a.id] = true;
+        player.credits += a.reward;
+        if (!player.stats) player.stats = {};
+        player.stats.creditsEarned = (player.stats.creditsEarned || 0) + a.reward;
+        unlocked.push(a.label + ' (+' + a.reward + ')');
+      }
+    } catch (e) {}
+  }
+  if (unlocked.length) {
+    save();
+    updateCredits();
+    // subtle notify
+    if (unlocked.length === 1) console.log('Achievement:', unlocked[0]);
+  }
+  return unlocked;
+}
+
+function updateAchievements() {
+  var el = document.getElementById('achievementsContent');
+  if (!el) return;
+  if (!player.achievements) player.achievements = {};
+  var html = '';
+  for (var i = 0; i < ACHIEVEMENT_DEFS.length; i++) {
+    var a = ACHIEVEMENT_DEFS[i];
+    var done = !!player.achievements[a.id];
+    html += '<div class="ach-card' + (done ? ' unlocked' : '') + '">' +
+      '<div><h4>' + (done ? '✓ ' : '') + a.label + '</h4><p>' + a.desc + '</p></div>' +
+      '<div style="color:' + (done ? 'var(--green)' : 'var(--accent)') + ';font-weight:700;white-space:nowrap;">+' + a.reward + '</div>' +
+    '</div>';
+  }
+  el.innerHTML = html;
+}
+
+function updateHistory() {
+  var el = document.getElementById('historyList');
+  if (!el) return;
+  var h = player.history || [];
+  if (h.length === 0) {
+    el.innerHTML = '<div class="empty"><p>No openings yet.</p></div>';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < Math.min(50, h.length); i++) {
+    var row = h[i];
+    var extra = '';
+    if (row.painted) extra += ' · ' + row.painted;
+    if (row.certified) extra += ' · Cert';
+    var d = new Date(row.t);
+    var when = (d.getMonth()+1) + '/' + d.getDate() + ' ' + d.getHours() + ':' + (d.getMinutes()<10?'0':'') + d.getMinutes();
+    html += '<div class="history-row"><span><strong>' + row.name + '</strong> <span style="color:var(--muted);">(' + row.rarity + extra + ')</span></span><span style="color:var(--muted);">' + row.crate + ' · ' + when + '</span></div>';
+  }
+  el.innerHTML = html;
+}
+
+function updateBlueprints() {
+  var el = document.getElementById('blueprintsList');
+  if (!el) return;
+  var bps = player.blueprints || [];
+  if (bps.length === 0) {
+    el.innerHTML = '<div class="empty"><p>No blueprints. Open Sport/Special/Deluxe/Import drops for a chance.</p></div>';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < bps.length; i++) {
+    var bp = bps[i];
+    html += '<div class="blueprint-row">' +
+      '<div><strong>' + bp.name + '</strong> <span style="color:var(--muted);">Blueprint · ' + bp.rarity + '</span><br><span style="color:var(--accent);">Craft: ' + bp.craftCost.toLocaleString() + ' credits</span></div>' +
+      '<button class="btn btn-primary" onclick="craftBlueprint(' + i + ')">Craft</button>' +
+    '</div>';
+  }
+  el.innerHTML = html;
+}
+
+function craftBlueprint(index) {
+  var bps = player.blueprints || [];
+  var bp = bps[index];
+  if (!bp) return;
+  if (player.credits < bp.craftCost) {
+    alert('Need ' + bp.craftCost.toLocaleString() + ' credits to craft.');
+    return;
+  }
+  player.credits -= bp.craftCost;
+  if (!player.stats) player.stats = {};
+  player.stats.creditsSpent = (player.stats.creditsSpent || 0) + bp.craftCost;
+  var item = {
+    id: uid(),
+    name: bp.name,
+    type: bp.type,
+    rarity: bp.rarity,
+    isPainted: false,
+    paint: null,
+    isCertified: false,
+    series: 'Blueprint',
+    count: 1
+  };
+  player.blueprints.splice(index, 1);
+  addItemToInventory(item);
+  save();
+  updateCredits();
+  updateInventory();
+  updateBlueprints();
+  updateGarage();
+  updateStats();
+  checkAchievements();
+  showResult(item);
+}
+
+
+function countByRarity(rarity) {
+  var count = 0;
+  for (var i = 0; i < player.inventory.length; i++) {
+    if (player.inventory[i].rarity === rarity) count += (player.inventory[i].count || 1);
+  }
+  return count;
+}
+
+function canTrade(rarity) {
+  // Dragon is the top — cannot trade further. Beta → Zomba, Zomba → Dragon allowed.
+  return countByRarity(rarity) >= 5 && rarity !== 'Dragon' && rarity !== 'Nova' && rarity !== 'Title';
+}
+
+function nextRarity(rarity) {
+  var idx = RARITIES.indexOf(rarity);
+  if (idx === -1 || idx >= RARITIES.length - 1) return null;
+  return RARITIES[idx + 1];
+}
+
+// Sell prices by rarity
+var SELL_PRICES = {
+  'Common': 5,
+  'Uncommon': 15,
+  'Rare': 40,
+  'Very Rare': 100,
+  'Import': 250,
+  'Exotic': 600,
+  'Black Market': 1500,
+  'Beta': 5000,
+  'Zomba': 2500,
+  'Dragon': 25000,
+  'Nova': 8000,
+  'Title': 50
+};
+
+var selectedIds = {};
+var invFilterRarity = 'all';
+var invFilterType = 'all';
+var invFilterSearch = '';
+var invFilterFavOnly = false;
+
+
+function toggleSelect(id) {
+  if (selectedIds[id]) {
+    delete selectedIds[id];
+  } else {
+    selectedIds[id] = true;
+  }
+  updateInventory();
+}
+
+function clearSelection() {
+  selectedIds = {};
+  updateInventory();
+}
+
+function getSelectedItems() {
+  var result = [];
+  for (var i = 0; i < player.inventory.length; i++) {
+    if (selectedIds[player.inventory[i].id]) {
+      result.push(player.inventory[i]);
+    }
+  }
+  return result;
+}
+
+function getSelectedValue() {
+  var items = getSelectedItems();
+  var total = 0;
+  for (var i = 0; i < items.length; i++) {
+    var c = items[i].count || 1;
+    total += (SELL_PRICES[items[i].rarity] || 10) * c;
+  }
+  return total;
+}
+
+function sellSelected() {
+  var items = getSelectedItems();
+  if (items.length === 0) return;
+
+  var total = getSelectedValue();
+  var soldCount = 0;
+  for (var i = 0; i < items.length; i++) soldCount += (items[i].count || 1);
+
+  var idsToRemove = {};
+  for (var i = 0; i < items.length; i++) {
+    idsToRemove[items[i].id] = true;
+  }
+
+  var newInv = [];
+  for (var j = 0; j < player.inventory.length; j++) {
+    if (!idsToRemove[player.inventory[j].id]) {
+      newInv.push(player.inventory[j]);
+    }
+  }
+  player.inventory = newInv;
+  player.credits += total;
+  selectedIds = {};
+  save();
+  updateUI();
+  alert('Sold ' + soldCount + ' item(s) for ' + total.toLocaleString() + ' credits!');
+}
+
+// ===================== ACTIONS =====================
+function getCrateById(crateId) {
+  var all = allCrates();
+  for (var i = 0; i < all.length; i++) {
+    if (all[i].id === crateId) return all[i];
+  }
+  // fallback search EVENT_CRATES even if inactive (for owned drops)
+  for (var j = 0; j < EVENT_CRATES.length; j++) {
+    if (EVENT_CRATES[j].id === crateId) return EVENT_CRATES[j];
+  }
+  return null;
+}
+
+// Buy drops in the Shop (qty = how many to buy at once)
+function buyDrop(crateId, qty) {
+  qty = parseInt(qty, 10) || 1;
+  if (qty < 1) qty = 1;
+  if (qty > 100000) qty = 100000;
+
+  var crate = getCrateById(crateId);
+  if (!crate) return;
+
+  var totalCost = crate.price * qty;
+  if (player.credits < totalCost) {
+    alert('Not enough credits! Need ' + totalCost.toLocaleString() + ' for ' + qty + ' drops.');
+    return;
+  }
+
+  player.credits -= totalCost;
+  if (!player.stats) player.stats = { openings: 0, creditsSpent: 0, creditsEarned: 0 };
+  player.stats.creditsSpent = (player.stats.creditsSpent || 0) + totalCost;
+  if (!player.ownedDrops[crateId]) player.ownedDrops[crateId] = 0;
+  player.ownedDrops[crateId] += qty;
+  bumpChallenge('buyAny', 1);
+  save();
+  updateCredits();
+  renderCrates();
+  updateOwnedDrops();
+}
+
+// Open one drop of a given crate type (from the stack)
+function openOwnedDrop(crateId) {
+  if (!player.ownedDrops[crateId] || player.ownedDrops[crateId] <= 0) return;
+
+  var crate = getCrateById(crateId);
+  if (!crate) return;
+
+  player.ownedDrops[crateId]--;
+  if (player.ownedDrops[crateId] <= 0) delete player.ownedDrops[crateId];
+  save();
+  updateOwnedDrops();
+
+  document.getElementById('openingOverlay').classList.add('show');
+
+  setTimeout(function() {
+    var item = generateItem(crate);
+    addItemToInventory(item);
+    logPull(crate, item);
+    maybeBlueprint(crate, item);
+    if (!player.stats) player.stats = { openings: 0, creditsSpent: 0, creditsEarned: 0 };
+    player.stats.openings = (player.stats.openings || 0) + 1;
+    addXP(Math.floor(5 * techBonus('xp')));
+    bumpChallenge('open5', 1);
+    bumpChallenge('open20', 1);
+    checkAchievements();
+    save();
+
+    document.getElementById('openingOverlay').classList.remove('show');
+    showResult(item);
+    updateInventory();
+    updateTitles();
+    updateTradeIn();
+    updateGarage();
+    updateStats();
+    updateHistory();
+    updateBlueprints();
+    updateAchievements();
+  }, 1400);
+}
+
+// Merge identical items into stacks (keeps inventory small)
+function addItemToInventory(item) {
+  for (var i = 0; i < player.inventory.length; i++) {
+    var inv = player.inventory[i];
+    if (inv.name === item.name &&
+        inv.rarity === item.rarity &&
+        inv.type === item.type &&
+        (inv.series || '') === (item.series || '') &&
+        !!inv.isPainted === !!item.isPainted &&
+        (inv.paint || '') === (item.paint || '') &&
+        !!inv.isCertified === !!item.isCertified) {
+      inv.count = (inv.count || 1) + 1;
+      return;
+    }
+  }
+  item.count = 1;
+  player.inventory.push(item);
+}
+
+// Bulk open — no popup confirm, runs immediately
+function openDropsBulk(crateIdFilter) {
+  try {
+    var jobs = [];
+    var total = 0;
+
+    if (crateIdFilter) {
+      var c = player.ownedDrops[crateIdFilter] || 0;
+      if (c > 0) {
+        jobs.push({ crateId: crateIdFilter, count: c });
+        total = c;
+      }
+    } else {
+      for (var k in player.ownedDrops) {
+        if (player.ownedDrops.hasOwnProperty(k) && player.ownedDrops[k] > 0) {
+          jobs.push({ crateId: k, count: player.ownedDrops[k] });
+          total += player.ownedDrops[k];
+        }
+      }
+    }
+
+    if (total === 0) {
+      alert('No drops to open.');
+      return;
+    }
+
+    var rarityCounts = {};
+    var nameCounts = {};
+
+    for (var j = 0; j < jobs.length; j++) {
+      var job = jobs[j];
+      var crate = getCrateById(job.crateId);
+      if (!crate) continue;
+      for (var n = 0; n < job.count; n++) {
+        var item = generateItem(crate);
+        addItemToInventory(item);
+        logPull(crate, item);
+        maybeBlueprint(crate, item);
+        rarityCounts[item.rarity] = (rarityCounts[item.rarity] || 0) + 1;
+        nameCounts[item.name] = (nameCounts[item.name] || 0) + 1;
+      }
+      delete player.ownedDrops[job.crateId];
+    }
+
+    if (!crateIdFilter) player.ownedDrops = {};
+
+    if (!player.stats) player.stats = { openings: 0, creditsSpent: 0, creditsEarned: 0 };
+    player.stats.openings = (player.stats.openings || 0) + total;
+    addXP(total * 5);
+    bumpChallenge('open5', total);
+    bumpChallenge('open20', total);
+    checkAchievements();
+    save();
+    updateOwnedDrops();
+    updateInventory();
+    updateTitles();
+    updateTradeIn();
+    updateGarage();
+    updateStats();
+    updateHistory();
+    updateBlueprints();
+    updateAchievements();
+
+    var summary = 'Opened ' + total + ' drops!\n\n';
+    var rarOrder = ['Nova', 'Dragon', 'Zomba', 'Beta', 'Title', 'Black Market', 'Exotic', 'Import', 'Very Rare', 'Rare', 'Uncommon', 'Common'];
+    for (var r = 0; r < rarOrder.length; r++) {
+      if (rarityCounts[rarOrder[r]]) summary += rarOrder[r] + ': ' + rarityCounts[rarOrder[r]] + '\n';
+    }
+    summary += '\n';
+    var names = Object.keys(nameCounts);
+    names.sort(function(a, b) { return nameCounts[b] - nameCounts[a]; });
+    for (var i = 0; i < names.length; i++) {
+      summary += names[i] + ': ' + nameCounts[names[i]] + '\n';
+    }
+    alert(summary);
+  } catch (err) {
+    console.log(err);
+    alert('Open All error: ' + (err && err.message ? err.message : String(err)));
+  }
+}
+
+function openAllOfType(crateId) {
+  openDropsBulk(crateId);
+}
+
+function openAllDrops() {
+  openDropsBulk(null);
+}
+
+function showResult(item) {
+  document.getElementById('resultName').textContent = item.name;
+  var rarityEl = document.getElementById('resultRarity');
+  rarityEl.textContent = item.rarity;
+  rarityEl.className = 'rarity-result ' + (RARITY_CLASS[item.rarity] || 'r-rare');
+
+  var paintedEl = document.getElementById('resultPainted');
+  if (item.isPainted && item.paint) {
+    paintedEl.style.display = 'block';
+    paintedEl.textContent = 'Painted: ' + item.paint;
+    paintedEl.style.color = '#4fc3f7';
+  } else {
+    paintedEl.style.display = 'none';
+  }
+
+  var certEl = document.getElementById('resultCertified');
+  certEl.style.display = item.isCertified ? 'block' : 'none';
+
+  document.getElementById('resultOverlay').classList.add('show');
+}
+
+function closeResult() {
+  document.getElementById('resultOverlay').classList.remove('show');
+}
+
+
+
+function updateAdminButton() {
+  var wrap = document.getElementById('adminBtnWrap');
+  if (!wrap) return;
+  wrap.style.display = player.adminUnlocked ? 'block' : 'none';
+}
+
+function fillAdminDropSelect() {
+  var sel = document.getElementById('adminDropSelect');
+  if (!sel) return;
+  var html = '';
+  var list = allCrates();
+  // include all event crates for admin
+  for (var e = 0; e < EVENT_CRATES.length; e++) {
+    var found = false;
+    for (var x = 0; x < list.length; x++) if (list[x].id === EVENT_CRATES[e].id) found = true;
+    if (!found) list.push(EVENT_CRATES[e]);
+  }
+  for (var i = 0; i < list.length; i++) {
+    var c = list[i];
+    html += '<option value="' + c.id + '">' + c.name + ' (' + c.price.toLocaleString() + ' ea)</option>';
+  }
+  sel.innerHTML = html;
+}
+
+function openAdminMenu() {
+  if (!player.adminUnlocked) {
+    alert('Redeem code Mod first.');
+    return;
+  }
+  fillAdminDropSelect();
+  var msg1 = document.getElementById('adminDropMsg');
+  var msg2 = document.getElementById('adminCreditMsg');
+  var msg3 = document.getElementById('adminLevelMsg');
+  if (msg1) { msg1.textContent = ''; msg1.className = 'admin-msg'; }
+  if (msg2) { msg2.textContent = ''; msg2.className = 'admin-msg'; }
+  if (msg3) { msg3.textContent = ''; msg3.className = 'admin-msg'; }
+  var lvlInput = document.getElementById('adminLevel');
+  var xpInput = document.getElementById('adminXP');
+  if (lvlInput) lvlInput.value = player.level || 1;
+  if (xpInput) xpInput.value = player.xp || 0;
+  document.getElementById('adminOverlay').classList.add('show');
+}
+
+function closeAdminMenu() {
+  document.getElementById('adminOverlay').classList.remove('show');
+}
+
+function adminGiveDrops() {
+  var crateId = document.getElementById('adminDropSelect').value;
+  var qty = parseInt(document.getElementById('adminDropQty').value, 10) || 0;
+  var msg = document.getElementById('adminDropMsg');
+  if (qty < 1) {
+    msg.className = 'admin-msg error';
+    msg.textContent = 'Enter a valid amount (1 or more).';
+    return;
+  }
+  if (qty > 1000000) qty = 1000000;
+  var crate = getCrateById(crateId);
+  if (!crate) {
+    msg.className = 'admin-msg error';
+    msg.textContent = 'Invalid drop.';
+    return;
+  }
+  if (!player.ownedDrops[crateId]) player.ownedDrops[crateId] = 0;
+  player.ownedDrops[crateId] += qty;
+  save();
+  updateOwnedDrops();
+  renderCrates();
+  msg.className = 'admin-msg success';
+  msg.textContent = 'Added ' + qty.toLocaleString() + ' × ' + crate.name + '!';
+}
+
+function adminGiveCredits() {
+  var amt = parseInt(document.getElementById('adminCreditAmt').value, 10) || 0;
+  var msg = document.getElementById('adminCreditMsg');
+  if (amt < 1) {
+    msg.className = 'admin-msg error';
+    msg.textContent = 'Enter a valid amount (1 or more).';
+    return;
+  }
+  player.credits += amt;
+  save();
+  updateCredits();
+  renderCrates();
+  msg.className = 'admin-msg success';
+  msg.textContent = '+' + amt.toLocaleString() + ' credits added!';
+}
+
+function adminSetLevel() {
+  var lvl = parseInt(document.getElementById('adminLevel').value, 10) || 0;
+  var xp = parseInt(document.getElementById('adminXP').value, 10);
+  var msg = document.getElementById('adminLevelMsg');
+  if (lvl < 1) {
+    msg.className = 'admin-msg error';
+    msg.textContent = 'Level must be 1 or higher.';
+    return;
+  }
+  if (isNaN(xp) || xp < 0) xp = 0;
+  player.level = lvl;
+  player.xp = xp;
+  save();
+  updateStats();
+  msg.className = 'admin-msg success';
+  msg.textContent = 'Set to Level ' + lvl + ' with ' + xp.toLocaleString() + ' XP!';
+}
+
+
+function redeemCode() {
+  var input = document.getElementById('redeemInput');
+  var msg = document.getElementById('redeemMsg');
+  var code = (input.value || '').trim().toLowerCase();
+
+  if (!code) {
+    msg.className = 'redeem-msg error';
+    msg.textContent = 'Please enter a code.';
+    return;
+  }
+
+  // Code "10" gives 100,000 credits — can be used unlimited times
+  if (code === '10') {
+    player.credits += 100000;
+    save();
+    updateCredits();
+    renderCrates();
+    msg.className = 'redeem-msg success';
+    msg.textContent = '+100,000 Credits added!';
+    input.value = '';
+    return;
+  }
+
+  // Code "admin" gives 997,500 credits — can be used unlimited times
+  if (code === 'admin') {
+    player.credits += 997500;
+    save();
+    updateCredits();
+    renderCrates();
+    msg.className = 'redeem-msg success';
+    msg.textContent = '+997,500 Credits added!';
+    input.value = '';
+    return;
+  }
+
+  // Code "1" gives 1,000,000,000,000 credits — can be used unlimited times
+  if (code === '1') {
+    player.credits += 1000000000000;
+    save();
+    updateCredits();
+    renderCrates();
+    msg.className = 'redeem-msg success';
+    msg.textContent = '+1,000,000,000,000 Credits added!';
+    input.value = '';
+    return;
+  }
+
+  // Code "mod" unlocks admin menu
+  if (code === 'mod') {
+    player.adminUnlocked = true;
+    save();
+    updateAdminButton();
+    openAdminMenu();
+    msg.className = 'redeem-msg success';
+    msg.textContent = 'Admin menu unlocked!';
+    input.value = '';
+    return;
+  }
+
+  msg.className = 'redeem-msg error';
+  msg.textContent = 'Invalid code.';
+}
+
+function tradeIn(rarity) {
+  if (!canTrade(rarity)) return;
+
+  var need = 5;
+  var newInv = [];
+  for (var i = 0; i < player.inventory.length; i++) {
+    var item = player.inventory[i];
+    if (item.rarity === rarity && need > 0) {
+      var c = item.count || 1;
+      if (c <= need) {
+        need -= c;
+        // remove entire stack
+      } else {
+        item.count = c - need;
+        need = 0;
+        newInv.push(item);
+      }
+    } else {
+      newInv.push(item);
+    }
+  }
+  player.inventory = newInv;
+
+  var next = nextRarity(rarity);
+  if (!next) return;
+
+  var pool = ITEM_POOL[next] || ITEM_POOL['Rare'];
+  var base = pool[Math.floor(Math.random() * pool.length)];
+  var special = (next === 'Beta' || next === 'Zomba' || next === 'Dragon' || next === 'Nova' || next === 'Title');
+  var newItem = {
+    id: uid(),
+    name: base.name,
+    type: base.type,
+    rarity: next,
+    isPainted: special ? false : Math.random() < 0.3,
+    paint: null,
+    isCertified: special ? false : Math.random() < 0.1,
+    series: special ? next : 'Trade-In',
+    count: 1
+  };
+  if (newItem.isPainted) {
+    newItem.paint = PAINTS[Math.floor(Math.random() * PAINTS.length)];
+  }
+
+  addItemToInventory(newItem);
+  bumpChallenge('trade1', 1);
+  addXP(15);
+  if (!player.stats) player.stats = {};
+  player.stats.trades = (player.stats.trades || 0) + 1;
+  checkAchievements();
+  save();
+  showResult(newItem);
+  updateUI();
+}
+
+// ===================== UI =====================
+function updateCredits() {
+  document.getElementById('creditsDisplay').textContent = player.credits.toLocaleString();
+}
+
+
+function renderCrates() {
+  var grid = document.getElementById('crateGrid');
+  if (!grid) return;
+
+  var html = '';
+  var qtys = [1, 10, 100, 1000, 10000, 100000];
+  var crateList = allCrates();
+  for (var i = 0; i < crateList.length; i++) {
+    var c = crateList[i];
+    html += '<div class="crate-card">' +
+      '<div class="crate-name">' + c.name + (c.event ? ' <span class="event-badge">EVENT</span>' : '') + '</div>' +
+      '<div class="crate-desc">' + c.desc + '</div>' +
+      '<div style="color:var(--accent);font-weight:700;margin-bottom:10px;">' + c.price.toLocaleString() + ' Credits each</div>' +
+      '<div class="crate-price" style="flex-wrap:wrap;gap:6px;">';
+    for (var q = 0; q < qtys.length; q++) {
+      var qty = qtys[q];
+      var cost = c.price * qty;
+      var can = player.credits >= cost;
+      html += '<button class="btn btn-primary" style="font-size:0.8rem;padding:8px 10px;" onclick="buyDrop(\'' + c.id + '\', ' + qty + ')"' +
+        (can ? '' : ' disabled') + '>Buy ' + qty.toLocaleString() + '</button>';
+    }
+    html += '</div>' +
+      '<div style="font-size:0.75rem;color:var(--muted);margin-top:8px;">Max buy 100,000 = ' + (c.price * 100000).toLocaleString() + ' credits</div>' +
+    '</div>';
+  }
+  grid.innerHTML = html;
+}
+
+function updateOwnedDrops() {
+  var container = document.getElementById('ownedDropsContent');
+  if (!container) return;
+
+  // Ensure map format
+  if (Array.isArray(player.ownedDrops)) {
+    player.ownedDrops = migrateOwnedDrops(player.ownedDrops);
+  }
+  if (!player.ownedDrops || typeof player.ownedDrops !== 'object') {
+    player.ownedDrops = {};
+  }
+
+  var total = totalOwnedDrops();
+  if (total === 0) {
+    container.innerHTML = '<div class="empty"><h3>No unopened drops</h3><p>Buy drops in the Shop, then come back here to open them.</p></div>';
+    return;
+  }
+
+  var order = [];
+  for (var k in player.ownedDrops) {
+    if (player.ownedDrops.hasOwnProperty(k) && player.ownedDrops[k] > 0) order.push(k);
+  }
+
+  var html = '<div class="sell-bar" style="margin-bottom:20px;">' +
+    '<div class="sell-info">You have <span>' + total + '</span> unopened drop' +
+    (total !== 1 ? 's' : '') + '</div>' +
+    '<div class="sell-actions">' +
+      '<button class="btn btn-primary" onclick="openAllDrops()">Open All</button>' +
+    '</div>' +
+  '</div>';
+
+  html += '<div class="crate-grid">';
+  for (var j = 0; j < order.length; j++) {
+    var crateId = order[j];
+    var count = player.ownedDrops[crateId];
+    var crate = getCrateById(crateId);
+    var name = crate ? crate.name : crateId;
+    var desc = crate ? crate.desc : '';
+    html += '<div class="crate-card">' +
+      '<div class="crate-name">' + name +
+        (count > 1 ? ' <span style="color:var(--accent);">× ' + count + '</span>' : '') +
+      '</div>' +
+      '<div class="crate-desc">' + desc + '</div>' +
+      '<div class="crate-price" style="flex-wrap:wrap;gap:8px;">' +
+        '<button class="btn btn-primary" onclick="openOwnedDrop(\'' + crateId + '\')">Open 1</button>' +
+        (count > 1
+          ? '<button class="btn btn-secondary" onclick="openAllOfType(\'' + crateId + '\')">Open All ' + count + '</button>'
+          : '') +
+      '</div>' +
+    '</div>';
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function itemStackKey(item) {
+  return item.name + '|' + item.rarity + '|' + item.type + '|' + (item.paint || '') + '|' + (item.isCertified ? '1' : '0') + '|' + (item.series || '');
+}
+
+function toggleSelectStack(stackKey) {
+  // Find all items matching this stack
+  var ids = [];
+  for (var i = 0; i < player.inventory.length; i++) {
+    if (itemStackKey(player.inventory[i]) === stackKey) {
+      ids.push(player.inventory[i].id);
+    }
+  }
+  if (ids.length === 0) return;
+
+  // If all selected, deselect; otherwise select all
+  var allSelected = true;
+  for (var j = 0; j < ids.length; j++) {
+    if (!selectedIds[ids[j]]) { allSelected = false; break; }
+  }
+  if (allSelected) {
+    for (var k = 0; k < ids.length; k++) delete selectedIds[ids[k]];
+  } else {
+    for (var m = 0; m < ids.length; m++) selectedIds[ids[m]] = true;
+  }
+  updateInventory();
+}
+
+function setInvFilter(kind, val) {
+  if (kind === 'rarity') invFilterRarity = val;
+  if (kind === 'type') invFilterType = val;
+  if (kind === 'search') invFilterSearch = val;
+  if (kind === 'fav') invFilterFavOnly = !!val;
+  updateInventory();
+}
+
+function updateInventory() {
+  var container = document.getElementById('inventoryContent');
+  if (!container) return;
+
+  var hasNonTitle = false;
+  for (var n = 0; n < player.inventory.length; n++) {
+    if (player.inventory[n].rarity !== 'Title') { hasNonTitle = true; break; }
+  }
+  if (!hasNonTitle) {
+    selectedIds = {};
+    container.innerHTML = '<div class="empty"><h3>Inventory is empty</h3><p>Buy drops in the Shop, open them in My Drops, then items appear here. Titles go to the Titles tab.</p></div>';
+    return;
+  }
+
+  if (!player.favorites) player.favorites = {};
+
+  var selectedCount = 0;
+  for (var i = 0; i < player.inventory.length; i++) {
+    if (selectedIds[player.inventory[i].id]) selectedCount += (player.inventory[i].count || 1);
+  }
+  var selectedValue = getSelectedValue();
+
+  var html = '';
+
+  html += '<div class="sell-bar">' +
+    '<div class="sell-info">Selected: <span>' + selectedCount + '</span> item' + (selectedCount !== 1 ? 's' : '') +
+    ' • Value: <span>' + selectedValue.toLocaleString() + '</span> credits</div>' +
+    '<div class="sell-actions">' +
+      '<button class="btn btn-secondary" onclick="clearSelection()" ' + (selectedCount === 0 ? 'disabled' : '') + '>Clear</button>' +
+      '<button class="btn btn-danger" onclick="sellSelected()" ' + (selectedCount === 0 ? 'disabled' : '') + '>Sell Selected</button>' +
+    '</div>' +
+  '</div>';
+
+  // Filters
+  html += '<div class="filter-bar">' +
+    '<select onchange="setInvFilter(\'rarity\', this.value)">' +
+      '<option value="all"' + (invFilterRarity === 'all' ? ' selected' : '') + '>All rarities</option>';
+  for (var ri = 0; ri < RARITIES.length; ri++) {
+    if (RARITIES[ri] === 'Title') continue;
+    html += '<option value="' + RARITIES[ri] + '"' + (invFilterRarity === RARITIES[ri] ? ' selected' : '') + '>' + RARITIES[ri] + '</option>';
+  }
+  html += '</select>' +
+    '<select onchange="setInvFilter(\'type\', this.value)">' +
+      '<option value="all"' + (invFilterType === 'all' ? ' selected' : '') + '>All types</option>' +
+      '<option value="Body"' + (invFilterType === 'Body' ? ' selected' : '') + '>Body</option>' +
+      '<option value="Wheel"' + (invFilterType === 'Wheel' ? ' selected' : '') + '>Wheel</option>' +
+      '<option value="Boost"' + (invFilterType === 'Boost' ? ' selected' : '') + '>Boost</option>' +
+      '<option value="Trail"' + (invFilterType === 'Trail' ? ' selected' : '') + '>Trail</option>' +
+      '<option value="Decal"' + (invFilterType === 'Decal' ? ' selected' : '') + '>Decal</option>' +
+      '<option value="Topper"' + (invFilterType === 'Topper' ? ' selected' : '') + '>Topper</option>' +
+      '<option value="Antenna"' + (invFilterType === 'Antenna' ? ' selected' : '') + '>Antenna</option>' +
+      '<option value="Goal Explosion"' + (invFilterType === 'Goal Explosion' ? ' selected' : '') + '>Goal Explosion</option>' +
+    '</select>' +
+    '<input type="text" placeholder="Search..." value="' + (invFilterSearch || '').replace(/"/g, '&quot;') + '" oninput="setInvFilter(\'search\', this.value)">' +
+    '<button class="btn btn-secondary" onclick="setInvFilter(\'fav\', !invFilterFavOnly)">' + (invFilterFavOnly ? '★ Favorites' : '☆ Favorites') + '</button>' +
+  '</div>';
+
+  var order = RARITIES.slice().reverse();
+  var anyShown = false;
+
+  for (var r = 0; r < order.length; r++) {
+    var rarity = order[r];
+    if (rarity === 'Title') continue;
+    if (invFilterRarity !== 'all' && invFilterRarity !== rarity) continue;
+
+    var items = [];
+    for (var i = 0; i < player.inventory.length; i++) {
+      var inv = player.inventory[i];
+      if (inv.rarity !== rarity) continue;
+      if (invFilterType !== 'all' && inv.type !== invFilterType) continue;
+      if (invFilterSearch && inv.name.toLowerCase().indexOf(invFilterSearch.toLowerCase()) === -1) continue;
+      if (invFilterFavOnly && !player.favorites[inv.id] && !player.favorites[inv.name]) continue;
+      items.push(inv);
+    }
+    if (items.length === 0) continue;
+    anyShown = true;
+
+    var stacks = {};
+    var stackOrder = [];
+    var rarityTotal = 0;
+    for (var j = 0; j < items.length; j++) {
+      var key = itemStackKey(items[j]);
+      if (!stacks[key]) {
+        stacks[key] = { item: items[j], count: 0, ids: [] };
+        stackOrder.push(key);
+      }
+      stacks[key].count += (items[j].count || 1);
+      rarityTotal += (items[j].count || 1);
+      stacks[key].ids.push(items[j].id);
+    }
+
+    html += '<div class="rarity-section">' +
+      '<div class="rarity-header">' +
+        '<span class="rarity-badge ' + (RARITY_CLASS[rarity] || '') + '">' + rarity + '</span>' +
+        '<span class="rarity-count">' + rarityTotal + ' item' + (rarityTotal !== 1 ? 's' : '') +
+        ' • Sell: ' + (SELL_PRICES[rarity] || 10) + ' each</span>' +
+      '</div>' +
+      '<div class="item-grid">';
+
+    for (var s = 0; s < stackOrder.length; s++) {
+      var stack = stacks[stackOrder[s]];
+      var item = stack.item;
+      var allSel = true;
+      for (var t = 0; t < stack.ids.length; t++) {
+        if (!selectedIds[stack.ids[t]]) { allSel = false; break; }
+      }
+      var isFav = !!(player.favorites[item.id] || player.favorites[item.name]);
+      var sk = stackOrder[s].replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      html += '<div class="item-card' + (allSel ? ' selected' : '') + '" onclick="toggleSelectStack(\'' + sk + '\')">' +
+        '<button class="fav-btn' + (isFav ? ' on' : '') + '" onclick="toggleFavorite(\'' + (item.name || '').replace(/'/g, "\\'") + '\', event)" title="Favorite">' + (isFav ? '★' : '☆') + '</button>' +
+        '<div class="item-name">' + item.name +
+          (stack.count > 1 ? ' <span style="color:var(--accent);">× ' + stack.count + '</span>' : '') +
+        '</div>' +
+        '<div class="item-meta">' + item.type + ' • ' + item.series + '</div>' +
+        '<div class="item-tags">';
+      if (item.isPainted && item.paint) html += '<span class="tag painted">' + item.paint + '</span>';
+      if (item.isCertified) html += '<span class="tag certified">Certified</span>';
+      html += '</div></div>';
+    }
+    html += '</div></div>';
+  }
+
+  if (!anyShown) {
+    html += '<div class="empty"><h3>No matching items</h3><p>Try changing filters.</p></div>';
+  }
+  container.innerHTML = html;
+}
+
+function updateTradeIn() {
+  var list = document.getElementById('tradeList');
+  if (!list) return;
+
+  var html = '';
+  for (var i = 0; i < RARITIES.length; i++) {
+    var rarity = RARITIES[i];
+    if (rarity === 'Dragon' || rarity === 'Nova' || rarity === 'Title') continue; // no trade-up
+
+    var count = countByRarity(rarity);
+    var ready = count >= 5;
+    var next = nextRarity(rarity);
+    if (!next) continue;
+
+    html += '<div class="trade-row">' +
+      '<div class="trade-info">' +
+        '<h3>' + rarity + ' → ' + next + '</h3>' +
+        '<p>' + count + ' / 5 items ready</p>' +
+      '</div>' +
+      '<button class="btn btn-primary" onclick="tradeIn(\'' + rarity + '\')"' +
+        (ready ? '' : ' disabled') + '>Trade In</button>' +
+    '</div>';
+  }
+  list.innerHTML = html;
+}
+
+
+function updateTitles() {
+  var container = document.getElementById('titlesContent');
+  if (!container) return;
+
+  var titles = [];
+  for (var i = 0; i < player.inventory.length; i++) {
+    if (player.inventory[i].rarity === 'Title') titles.push(player.inventory[i]);
+  }
+
+  if (titles.length === 0) {
+    container.innerHTML = '<div class="empty"><h3>No titles yet</h3><p>Buy and open Title Drops in the Shop to collect rank titles.</p></div>';
+    return;
+  }
+
+  // Stack by name
+  var stacks = {};
+  var order = [];
+  var total = 0;
+  for (var j = 0; j < titles.length; j++) {
+    var t = titles[j];
+    var key = t.name;
+    if (!stacks[key]) {
+      stacks[key] = 0;
+      order.push(key);
+    }
+    stacks[key] += (t.count || 1);
+    total += (t.count || 1);
+  }
+  order.sort();
+
+  var html = '<div class="sell-bar" style="margin-bottom:20px;"><div class="sell-info">You own <span>' + total + '</span> title' + (total !== 1 ? 's' : '') + ' (<span>' + order.length + '</span> unique)</div></div>';
+  html += '<div class="item-grid">';
+  for (var k = 0; k < order.length; k++) {
+    var name = order[k];
+    var count = stacks[name];
+    html += '<div class="item-card" style="border-color:#3f51b5;">' +
+      '<div class="item-name">' + name + (count > 1 ? ' <span style="color:var(--accent);">× ' + count + '</span>' : '') + '</div>' +
+      '<div class="item-meta">Rank Title</div>' +
+      '<div class="item-tags"><span class="rarity-badge r-title" style="font-size:0.7rem;">Title</span></div>' +
+    '</div>';
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+
+// ===================== XP / LEVEL =====================
+function xpForLevel(lvl) { return lvl * 50; }
+
+function addXP(amount) {
+  if (!player.level) player.level = 1;
+  if (!player.xp) player.xp = 0;
+  player.xp += amount;
+  var need = xpForLevel(player.level);
+  while (player.xp >= need) {
+    player.xp -= need;
+    player.level++;
+    need = xpForLevel(player.level);
+  }
+}
+
+// ===================== CHALLENGES =====================
+function todayKey() {
+  var d = new Date();
+  return d.getFullYear() + '-' + (d.getMonth()+1) + '-' + d.getDate();
+}
+
+function ensureChallengeDay() {
+  var today = todayKey();
+  if (player.challengeDay !== today) {
+    player.challengeDay = today;
+    player.challenges = {
+      open5: { progress: 0, goal: 5, reward: 500, done: false, label: 'Open 5 drops' },
+      open20: { progress: 0, goal: 20, reward: 2000, done: false, label: 'Open 20 drops' },
+      buyAny: { progress: 0, goal: 1, reward: 300, done: false, label: 'Buy any drop' },
+      trade1: { progress: 0, goal: 1, reward: 400, done: false, label: 'Complete 1 trade-in' },
+      claimBonus: { progress: 0, goal: 1, reward: 750, done: false, label: 'Claim daily bonus' }
+    };
+    save();
+  }
+  if (!player.challenges) player.challenges = {};
+}
+
+function bumpChallenge(key, amount) {
+  ensureChallengeDay();
+  var c = player.challenges[key];
+  if (!c || c.done) return;
+  c.progress = Math.min(c.goal, (c.progress || 0) + (amount || 1));
+  if (c.progress >= c.goal && !c.done) {
+    // auto-complete ready state; claim separately for claimBonus, auto-claim others
+    if (key !== 'claimBonus') {
+      c.done = true;
+      player.credits += c.reward;
+      if (!player.stats) player.stats = { openings: 0, creditsSpent: 0, creditsEarned: 0 };
+      player.stats.creditsEarned = (player.stats.creditsEarned || 0) + c.reward;
+    }
+  }
+  save();
+  updateChallenges();
+  updateCredits();
+}
+
+function claimDailyBonus() {
+  ensureChallengeDay();
+  var c = player.challenges.claimBonus;
+  if (!c || c.done) { alert('Already claimed today!'); return; }
+  c.progress = 1;
+  c.done = true;
+  var bonus = c.reward + techBonus('daily');
+  player.credits += bonus;
+  if (!player.stats) player.stats = { openings: 0, creditsSpent: 0, creditsEarned: 0 };
+  player.stats.creditsEarned = (player.stats.creditsEarned || 0) + c.reward;
+  save();
+  updateChallenges();
+  updateCredits();
+  renderCrates();
+  alert('+' + (c.reward + techBonus('daily')) + ' credits claimed!');
+}
+
+function updateChallenges() {
+  var el = document.getElementById('challengesContent');
+  if (!el) return;
+  ensureChallengeDay();
+  var html = '';
+  var keys = ['claimBonus', 'buyAny', 'open5', 'open20', 'trade1'];
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i];
+    var c = player.challenges[k];
+    if (!c) continue;
+    html += '<div class="challenge-card' + (c.done ? ' done' : '') + '">' +
+      '<div><h3>' + c.label + '</h3><p>' + (c.progress || 0) + ' / ' + c.goal +
+      ' · <span class="reward">+' + c.reward + ' credits</span></p></div>';
+    if (k === 'claimBonus' && !c.done) {
+      html += '<button class="btn btn-green" onclick="claimDailyBonus()">Claim</button>';
+    } else if (c.done) {
+      html += '<span style="color:var(--green);font-weight:700;">Done</span>';
+    } else {
+      html += '<span style="color:var(--muted);">In progress</span>';
+    }
+    html += '</div>';
+  }
+  el.innerHTML = html;
+}
+
+// ===================== GARAGE =====================
+var SLOT_TYPES = ['Body', 'Wheel', 'Boost', 'Trail', 'Goal Explosion', 'Topper', 'Antenna'];
+
+function itemsOfType(type) {
+  var list = [];
+  for (var i = 0; i < player.inventory.length; i++) {
+    var it = player.inventory[i];
+    if (it.rarity === 'Title') continue;
+    if (it.type === type) list.push(it);
+  }
+  // unique by name
+  var seen = {};
+  var unique = [];
+  for (var j = 0; j < list.length; j++) {
+    if (!seen[list[j].name]) {
+      seen[list[j].name] = true;
+      unique.push(list[j]);
+    }
+  }
+  unique.sort(function(a,b){ return a.name.localeCompare(b.name); });
+  return unique;
+}
+
+function updateGarage() {
+  var slots = document.getElementById('loadoutSlots');
+  if (!slots) return;
+  if (!player.loadout) player.loadout = { Body: null, Wheel: null, Boost: null, Trail: null, 'Goal Explosion': null, Topper: null, Antenna: null };
+
+  var html = '';
+  for (var i = 0; i < SLOT_TYPES.length; i++) {
+    var type = SLOT_TYPES[i];
+    var items = itemsOfType(type);
+    html += '<div class="slot-row"><div class="slot-type">' + type + '</div><select onchange="setLoadoutSlot(\'' + type + '\', this.value)">';
+    html += '<option value="">— None —</option>';
+    for (var j = 0; j < items.length; j++) {
+      var sel = (player.loadout[type] === items[j].name) ? ' selected' : '';
+      html += '<option value="' + items[j].name.replace(/"/g, '&quot;') + '"' + sel + '>' + items[j].name + ' (' + items[j].rarity + ')</option>';
+    }
+    html += '</select></div>';
+  }
+  slots.innerHTML = html;
+  renderCarPreview();
+}
+
+function setLoadoutSlot(type, name) {
+  if (!player.loadout) player.loadout = {};
+  player.loadout[type] = name || null;
+  save();
+  renderCarPreview();
+}
+
+function clearLoadout() {
+  player.loadout = { Body: null, Wheel: null, Boost: null, Trail: null, 'Goal Explosion': null, Topper: null, Antenna: null };
+  save();
+  updateGarage();
+}
+
+function savePreset() {
+  player.preset = JSON.parse(JSON.stringify(player.loadout || {}));
+  save();
+  alert('Preset saved!');
+}
+
+function loadPreset() {
+  if (!player.preset) { alert('No preset saved yet.'); return; }
+  player.loadout = JSON.parse(JSON.stringify(player.preset));
+  save();
+  updateGarage();
+  alert('Preset loaded!');
+}
+
+function hashColor(str) {
+  var h = 0;
+  for (var i = 0; i < (str || '').length; i++) h = ((h << 5) - h) + str.charCodeAt(i);
+  var hue = Math.abs(h) % 360;
+  return 'hsl(' + hue + ', 65%, 50%)';
+}
+
+function renderCarPreview() {
+  var lo = player.loadout || {};
+  var body = document.getElementById('carBody');
+  var cabin = document.getElementById('carCabin');
+  var wheelL = document.getElementById('wheelL');
+  var wheelR = document.getElementById('wheelR');
+  var wheelL2 = document.getElementById('wheelL2');
+  var wheelR2 = document.getElementById('wheelR2');
+  var boost = document.getElementById('carBoost');
+  var topper = document.getElementById('carTopper');
+  var label = document.getElementById('carLabel');
+  if (!body) return;
+
+  body.setAttribute('fill', lo.Body ? hashColor(lo.Body) : '#4285f4');
+  cabin.setAttribute('fill', lo.Body ? hashColor(lo.Body + 'x') : '#2a5a9a');
+  var wc = lo.Wheel ? hashColor(lo.Wheel) : '#222';
+  wheelL.setAttribute('fill', wc);
+  wheelR.setAttribute('fill', wc);
+  wheelL2.setAttribute('fill', lo.Wheel ? '#ddd' : '#888');
+  wheelR2.setAttribute('fill', lo.Wheel ? '#ddd' : '#888');
+  boost.setAttribute('fill', lo.Boost ? hashColor(lo.Boost) : '#f9ab00');
+  boost.setAttribute('opacity', lo.Boost ? '1' : '0.5');
+  if (topper) {
+    topper.setAttribute('opacity', lo.Topper ? '1' : '0');
+    topper.setAttribute('fill', lo.Topper ? hashColor(lo.Topper) : '#f44292');
+  }
+  if (label) {
+    var bodyName = lo.Body || 'Default Body';
+    var parts = [];
+    if (lo.Wheel) parts.push(lo.Wheel);
+    if (lo.Boost) parts.push(lo.Boost);
+    if (lo.Trail) parts.push(lo.Trail);
+    if (lo['Goal Explosion']) parts.push(lo['Goal Explosion']);
+    label.innerHTML = '<strong>' + bodyName + '</strong>' + (parts.length ? parts.join(' · ') : 'Equip items from your inventory');
+  }
+}
+
+// ===================== FAVORITES =====================
+function toggleFavorite(id, ev) {
+  if (ev) ev.stopPropagation();
+  if (!player.favorites) player.favorites = {};
+  if (player.favorites[id]) delete player.favorites[id];
+  else player.favorites[id] = true;
+  save();
+  updateInventory();
+}
+
+// ===================== STATS =====================
+function updateStats() {
+  var bar = document.getElementById('levelBar');
+  var grid = document.getElementById('statsGrid');
+  if (!bar || !grid) return;
+  var lvl = player.level || 1;
+  var xp = player.xp || 0;
+  var need = xpForLevel(lvl);
+  var pct = Math.min(100, Math.floor((xp / need) * 100));
+  bar.innerHTML = '<div class="lvl">Level ' + lvl + '</div>' +
+    '<div class="xp-track"><div class="xp-fill" style="width:' + pct + '%"></div></div>' +
+    '<div style="font-size:0.85rem;color:var(--muted);">' + xp + ' / ' + need + ' XP</div>';
+
+  var st = player.stats || { openings: 0, creditsSpent: 0, creditsEarned: 0 };
+  var invCount = 0;
+  for (var i = 0; i < player.inventory.length; i++) invCount += (player.inventory[i].count || 1);
+  var val = 0;
+  for (var j = 0; j < player.inventory.length; j++) {
+    var it = player.inventory[j];
+    val += (SELL_PRICES[it.rarity] || 10) * (it.count || 1);
+  }
+  grid.innerHTML =
+    '<div class="stat-box"><div class="num">' + (st.openings || 0).toLocaleString() + '</div><div class="lbl">Drops Opened</div></div>' +
+    '<div class="stat-box"><div class="num">' + invCount.toLocaleString() + '</div><div class="lbl">Items Owned</div></div>' +
+    '<div class="stat-box"><div class="num">' + val.toLocaleString() + '</div><div class="lbl">Inventory Value</div></div>' +
+    '<div class="stat-box"><div class="num">' + (st.creditsSpent || 0).toLocaleString() + '</div><div class="lbl">Credits Spent</div></div>' +
+    '<div class="stat-box"><div class="num">' + (st.creditsEarned || 0).toLocaleString() + '</div><div class="lbl">Credits Earned</div></div>' +
+    '<div class="stat-box"><div class="num">' + totalOwnedDrops().toLocaleString() + '</div><div class="lbl">Unopened Drops</div></div>' +
+    '<div class="stat-box"><div class="num">' + (player.pity || 0) + '</div><div class="lbl">Pity Counter</div></div>' +
+    '<div class="stat-box"><div class="num">' + countByRarity('Black Market') + '</div><div class="lbl">Black Markets</div></div>';
+  updateHistory();
+  updateBlueprints();
+}
+
+
+
+// ===================== TECH / IDLE =====================
+var TECH_DEFS = [
+  { id: 'paint1', name: 'Paint Polish I', desc: '+5% painted chance', cost: 5000, effect: 'paint', value: 0.05 },
+  { id: 'paint2', name: 'Paint Polish II', desc: '+10% painted chance', cost: 20000, effect: 'paint', value: 0.10, req: 'paint1' },
+  { id: 'pity1', name: 'Luck Charm', desc: 'Pity triggers at 30 instead of 40', cost: 15000, effect: 'pity', value: 30 },
+  { id: 'idle1', name: 'Workshop I', desc: '+50% idle credit rate', cost: 8000, effect: 'idle', value: 1.5 },
+  { id: 'idle2', name: 'Workshop II', desc: '+100% idle credit rate', cost: 25000, effect: 'idle', value: 2.0, req: 'idle1' },
+  { id: 'xp1', name: 'XP Boost', desc: '+50% XP from openings', cost: 10000, effect: 'xp', value: 1.5 },
+  { id: 'daily1', name: 'Daily Bonus+', desc: '+250 daily claim bonus', cost: 12000, effect: 'daily', value: 250 },
+  { id: 'upg1', name: 'Upgrade Odds', desc: '+10% item upgrade success', cost: 18000, effect: 'upgrade', value: 0.10 }
+];
+
+function hasTech(id) {
+  return player.tech && player.tech[id];
+}
+
+function techBonus(effect) {
+  var total = effect === 'paint' ? 0 : (effect === 'idle' || effect === 'xp' ? 1 : 0);
+  if (effect === 'pity') total = 40;
+  if (effect === 'upgrade') total = 0;
+  if (effect === 'daily') total = 0;
+  if (!player.tech) return total;
+  for (var i = 0; i < TECH_DEFS.length; i++) {
+    var t = TECH_DEFS[i];
+    if (player.tech[t.id] && t.effect === effect) {
+      if (effect === 'paint' || effect === 'upgrade' || effect === 'daily') total += t.value;
+      else if (effect === 'idle' || effect === 'xp') total = Math.max(total, t.value);
+      else if (effect === 'pity') total = Math.min(total, t.value);
+    }
+  }
+  return total;
+}
+
+function buyTech(id) {
+  var def = null;
+  for (var i = 0; i < TECH_DEFS.length; i++) if (TECH_DEFS[i].id === id) def = TECH_DEFS[i];
+  if (!def) return;
+  if (hasTech(id)) { alert('Already owned'); return; }
+  if (def.req && !hasTech(def.req)) { alert('Requires previous tech'); return; }
+  if (player.credits < def.cost) { alert('Not enough credits'); return; }
+  player.credits -= def.cost;
+  if (!player.tech) player.tech = {};
+  player.tech[id] = true;
+  if (!player.stats) player.stats = {};
+  player.stats.creditsSpent = (player.stats.creditsSpent || 0) + def.cost;
+  save();
+  updateCredits();
+  updateTech();
+  alert('Unlocked: ' + def.name);
+}
+
+function updateTech() {
+  var el = document.getElementById('techGrid');
+  if (!el) return;
+  var html = '';
+  for (var i = 0; i < TECH_DEFS.length; i++) {
+    var t = TECH_DEFS[i];
+    var owned = hasTech(t.id);
+    html += '<div class="tech-node' + (owned ? ' owned' : '') + '">' +
+      '<h4>' + t.name + (owned ? ' ✓' : '') + '</h4>' +
+      '<p style="color:var(--muted);font-size:0.85rem;margin:6px 0;">' + t.desc + '</p>' +
+      '<div style="color:var(--accent);font-weight:700;margin-bottom:8px;">' + t.cost.toLocaleString() + ' credits</div>';
+    if (!owned) html += '<button class="btn btn-primary" onclick="buyTech(\'' + t.id + '\')">Unlock</button>';
+    else html += '<span style="color:var(--green);">Owned</span>';
+    html += '</div>';
+  }
+  el.innerHTML = html;
+}
+
+function idleRatePerHour() {
+  var base = 200;
+  return Math.floor(base * techBonus('idle'));
+}
+
+function updateIdle() {
+  var el = document.getElementById('idleInfo');
+  if (!el) return;
+  if (!player.lastIdleCollect) player.lastIdleCollect = Date.now();
+  var hours = Math.max(0, (Date.now() - player.lastIdleCollect) / 3600000);
+  if (hours > 24) hours = 24; // cap 24h
+  var rate = idleRatePerHour();
+  var earned = Math.floor(hours * rate);
+  el.innerHTML = 'Rate: <strong style="color:var(--accent);">' + rate + '</strong> credits/hour · Away: <strong>' +
+    hours.toFixed(1) + 'h</strong> (max 24h) · Pending: <strong style="color:var(--green);">' + earned.toLocaleString() + '</strong>';
+}
+
+function collectIdle() {
+  if (!player.lastIdleCollect) player.lastIdleCollect = Date.now();
+  var hours = Math.max(0, (Date.now() - player.lastIdleCollect) / 3600000);
+  if (hours > 24) hours = 24;
+  var earned = Math.floor(hours * idleRatePerHour());
+  if (earned < 1) { alert('Nothing to collect yet. Come back later!'); return; }
+  player.credits += earned;
+  player.lastIdleCollect = Date.now();
+  if (!player.stats) player.stats = {};
+  player.stats.creditsEarned = (player.stats.creditsEarned || 0) + earned;
+  save();
+  updateCredits();
+  updateIdle();
+  renderCrates();
+  alert('Collected ' + earned.toLocaleString() + ' idle credits!');
+}
+
+// ===================== UPGRADE =====================
+function fillUpgradeSelect() {
+  var sel = document.getElementById('upgradeSelect');
+  if (!sel) return;
+  var html = '<option value="">— Select item —</option>';
+  for (var i = 0; i < player.inventory.length; i++) {
+    var it = player.inventory[i];
+    if (it.rarity === 'Title' || it.rarity === 'Dragon' || it.rarity === 'Nova') continue;
+    var next = nextRarity(it.rarity);
+    if (!next || next === 'Title') continue;
+    html += '<option value="' + i + '">' + it.name + ' [' + it.rarity + ']' + (it.count > 1 ? ' ×' + it.count : '') + '</option>';
+  }
+  sel.innerHTML = html;
+  sel.onchange = function() { refreshUpgradeInfo(); };
+  refreshUpgradeInfo();
+}
+
+function upgradeChanceFor(rarity) {
+  var base = {
+    'Common': 0.55, 'Uncommon': 0.45, 'Rare': 0.38, 'Very Rare': 0.32,
+    'Import': 0.25, 'Exotic': 0.18, 'Black Market': 0.12, 'Beta': 0.10, 'Zomba': 0.08
+  };
+  return Math.min(0.75, (base[rarity] || 0.25) + techBonus('upgrade'));
+}
+
+function refreshUpgradeInfo() {
+  var sel = document.getElementById('upgradeSelect');
+  var info = document.getElementById('upgradeInfo');
+  var fill = document.getElementById('upgradeChanceFill');
+  var txt = document.getElementById('upgradeChanceText');
+  var nxt = document.getElementById('upgradeNextText');
+  if (!sel || sel.value === '') {
+    if (info) info.textContent = 'Select an item';
+    if (fill) fill.style.width = '0%';
+    if (txt) txt.textContent = '—';
+    if (nxt) nxt.textContent = '—';
+    return;
+  }
+  var it = player.inventory[parseInt(sel.value, 10)];
+  if (!it) return;
+  var next = nextRarity(it.rarity);
+  var chance = upgradeChanceFor(it.rarity);
+  if (info) info.innerHTML = 'Risking <strong>' + it.name + '</strong> (' + it.rarity + ')';
+  if (fill) fill.style.width = Math.round(chance * 100) + '%';
+  if (txt) txt.textContent = Math.round(chance * 100) + '%';
+  if (nxt) nxt.textContent = next || '—';
+}
+
+function doUpgrade() {
+  var sel = document.getElementById('upgradeSelect');
+  var msg = document.getElementById('upgradeMsg');
+  if (!sel || sel.value === '') {
+    msg.className = 'admin-msg error';
+    msg.textContent = 'Select an item first.';
+    return;
+  }
+  var idx = parseInt(sel.value, 10);
+  var it = player.inventory[idx];
+  if (!it) return;
+  var next = nextRarity(it.rarity);
+  if (!next || next === 'Title') {
+    msg.className = 'admin-msg error';
+    msg.textContent = 'Cannot upgrade this item further.';
+    return;
+  }
+  var chance = upgradeChanceFor(it.rarity);
+  var success = Math.random() < chance;
+
+  // remove 1 from stack
+  if ((it.count || 1) > 1) it.count--;
+  else player.inventory.splice(idx, 1);
+
+  if (success) {
+    var pool = ITEM_POOL[next] || ITEM_POOL['Rare'];
+    var base = pool[Math.floor(Math.random() * pool.length)];
+    var newItem = {
+      id: uid(), name: base.name, type: base.type, rarity: next,
+      isPainted: Math.random() < (0.25 + techBonus('paint')),
+      paint: null, isCertified: Math.random() < 0.1, series: 'Upgrade', count: 1
+    };
+    if (newItem.isPainted) newItem.paint = PAINTS[Math.floor(Math.random() * PAINTS.length)];
+    addItemToInventory(newItem);
+    msg.className = 'admin-msg success';
+    msg.textContent = 'SUCCESS! Got ' + newItem.name + ' (' + next + ')';
+    showResult(newItem);
+  } else {
+    msg.className = 'admin-msg error';
+    msg.textContent = 'FAILED! Item destroyed.';
+  }
+  save();
+  updateInventory();
+  updateGarage();
+  fillUpgradeSelect();
+  updateStats();
+}
+
+// ===================== MARKET =====================
+var MARKET_ITEMS = [
+  { name: 'Draco', type: 'Wheel', rarity: 'Exotic', price: 4000 },
+  { name: 'Zomba', type: 'Wheel', rarity: 'Exotic', price: 4500 },
+  { name: 'Heatwave', type: 'Decal', rarity: 'Black Market', price: 12000 },
+  { name: 'Dissolver', type: 'Decal', rarity: 'Black Market', price: 15000 },
+  { name: '20XX', type: 'Decal', rarity: 'Black Market', price: 13000 },
+  { name: 'Alpha Boost', type: 'Boost', rarity: 'Beta', price: 25000 },
+  { name: 'Goldstone Wheels', type: 'Wheel', rarity: 'Beta', price: 30000 },
+  { name: 'Titanium White Zomba', type: 'Wheel', rarity: 'Zomba', price: 8000 },
+  { name: 'Dueling Dragons', type: 'Goal Explosion', rarity: 'Dragon', price: 20000 },
+  { name: 'Ronin GXT', type: 'Body', rarity: 'Nova', price: 15000 },
+  { name: 'Octane ZSR', type: 'Body', rarity: 'Very Rare', price: 800 },
+  { name: 'Dominus GT', type: 'Body', rarity: 'Import', price: 1500 }
+];
+
+function updateMarket() {
+  var el = document.getElementById('marketGrid');
+  if (!el) return;
+  var html = '';
+  for (var i = 0; i < MARKET_ITEMS.length; i++) {
+    var m = MARKET_ITEMS[i];
+    var can = player.credits >= m.price;
+    html += '<div class="market-item">' +
+      '<h4>' + m.name + '</h4>' +
+      '<div style="font-size:0.8rem;color:var(--muted);">' + m.type + ' · ' + m.rarity + '</div>' +
+      '<div class="price">' + m.price.toLocaleString() + ' credits</div>' +
+      '<button class="btn btn-primary" onclick="buyMarketItem(' + i + ')"' + (can ? '' : ' disabled') + '>Buy</button>' +
+    '</div>';
+  }
+  el.innerHTML = html;
+}
+
+function buyMarketItem(index) {
+  var m = MARKET_ITEMS[index];
+  if (!m) return;
+  if (player.credits < m.price) { alert('Not enough credits'); return; }
+  player.credits -= m.price;
+  if (!player.stats) player.stats = {};
+  player.stats.creditsSpent = (player.stats.creditsSpent || 0) + m.price;
+  var item = {
+    id: uid(), name: m.name, type: m.type, rarity: m.rarity,
+    isPainted: false, paint: null, isCertified: false, series: 'Market', count: 1
+  };
+  addItemToInventory(item);
+  save();
+  updateCredits();
+  updateInventory();
+  updateMarket();
+  updateGarage();
+  checkAchievements();
+  alert('Purchased ' + m.name + '!');
+}
+
+// ===================== BATTLE =====================
+function fillBattleSelect() {
+  var sel = document.getElementById('battleCrate');
+  var sim = document.getElementById('simCrate');
+  var list = allCrates();
+  var html = '';
+  for (var i = 0; i < list.length; i++) {
+    html += '<option value="' + list[i].id + '">' + list[i].name + ' (' + list[i].price + ')</option>';
+  }
+  if (sel) sel.innerHTML = html;
+  if (sim) sim.innerHTML = html;
+}
+
+function startBattle() {
+  var sel = document.getElementById('battleCrate');
+  var out = document.getElementById('battleResult');
+  if (!sel || !out) return;
+  var crate = getCrateById(sel.value);
+  if (!crate) return;
+
+  // Prefer consuming owned drop, else charge price
+  if (player.ownedDrops[crate.id] && player.ownedDrops[crate.id] > 0) {
+    player.ownedDrops[crate.id]--;
+    if (player.ownedDrops[crate.id] <= 0) delete player.ownedDrops[crate.id];
+  } else if (player.credits >= crate.price) {
+    player.credits -= crate.price;
+    if (!player.stats) player.stats = {};
+    player.stats.creditsSpent = (player.stats.creditsSpent || 0) + crate.price;
+  } else {
+    alert('Need an owned ' + crate.name + ' or ' + crate.price + ' credits.');
+    return;
+  }
+
+  var you = generateItem(crate);
+  var bot = generateItem(crate);
+  var youVal = SELL_PRICES[you.rarity] || 10;
+  var botVal = SELL_PRICES[bot.rarity] || 10;
+  if (you.isPainted) youVal = Math.floor(youVal * 1.5);
+  if (bot.isPainted) botVal = Math.floor(botVal * 1.5);
+
+  var html = '<div class="battle-result"><h3>Battle Results</h3>';
+  html += '<p><strong>You:</strong> ' + you.name + ' (' + you.rarity + ') — value ' + youVal + '</p>';
+  html += '<p><strong>Bot:</strong> ' + bot.name + ' (' + bot.rarity + ') — value ' + botVal + '</p>';
+
+  if (youVal >= botVal) {
+    addItemToInventory(you);
+    addItemToInventory(bot);
+    html += '<p style="color:var(--green);font-weight:700;margin-top:8px;">YOU WIN! You keep both items.</p>';
+  } else {
+    html += '<p style="color:var(--red);font-weight:700;margin-top:8px;">BOT WINS. You get nothing.</p>';
+  }
+  html += '</div>';
+  out.innerHTML = html;
+
+  if (!player.stats) player.stats = {};
+  player.stats.openings = (player.stats.openings || 0) + 1;
+  addXP(Math.floor(5 * techBonus('xp')));
+  logPull(crate, you);
+  checkAchievements();
+  save();
+  updateCredits();
+  updateOwnedDrops();
+  updateInventory();
+  updateGarage();
+  updateStats();
+}
+
+function simulateOpens() {
+  var sel = document.getElementById('simCrate');
+  var count = parseInt(document.getElementById('simCount').value, 10) || 100;
+  var out = document.getElementById('simResult');
+  if (!sel || !out) return;
+  if (count > 1000) count = 1000;
+  var crate = getCrateById(sel.value);
+  if (!crate) return;
+  var rarityCounts = {};
+  var painted = 0;
+  var totalVal = 0;
+  // Don't mutate pity during sim - use temp
+  var savedPity = player.pity;
+  for (var i = 0; i < count; i++) {
+    var item = generateItem(crate);
+    rarityCounts[item.rarity] = (rarityCounts[item.rarity] || 0) + 1;
+    if (item.isPainted) painted++;
+    totalVal += SELL_PRICES[item.rarity] || 10;
+  }
+  player.pity = savedPity; // restore
+  var lines = ['Simulated ' + count + ' × ' + crate.name + ' (no items given)\n'];
+  var order = ['Nova', 'Dragon', 'Zomba', 'Beta', 'Title', 'Black Market', 'Exotic', 'Import', 'Very Rare', 'Rare', 'Uncommon', 'Common'];
+  for (var r = 0; r < order.length; r++) {
+    if (rarityCounts[order[r]]) lines.push(order[r] + ': ' + rarityCounts[order[r]] + ' (' + (100*rarityCounts[order[r]]/count).toFixed(1) + '%)');
+  }
+  lines.push('\nPainted: ' + painted + ' (' + (100*painted/count).toFixed(1) + '%)');
+  lines.push('Est. total sell value: ' + totalVal.toLocaleString());
+  out.textContent = lines.join('\n');
+}
+
+function updateLabPanels() {
+  updateTech();
+  updateIdle();
+  fillBattleSelect();
+}
+
+
+function updateUI() {
+  updateCredits();
+  renderCrates();
+  updateOwnedDrops();
+  updateInventory();
+  updateTitles();
+  updateTradeIn();
+  updateAdminButton();
+  updateGarage();
+  updateChallenges();
+  updateStats();
+  updateAchievements();
+  updateHistory();
+  updateBlueprints();
+  fillUpgradeSelect();
+  updateMarket();
+  updateLabPanels();
+}
+
+// Tabs
+var tabs = document.querySelectorAll('.tab');
+for (var t = 0; t < tabs.length; t++) {
+  tabs[t].addEventListener('click', function() {
+    var tabName = this.getAttribute('data-tab');
+    var allTabs = document.querySelectorAll('.tab');
+    var allPanels = document.querySelectorAll('.panel');
+    for (var i = 0; i < allTabs.length; i++) allTabs[i].classList.remove('active');
+    for (var j = 0; j < allPanels.length; j++) allPanels[j].classList.remove('active');
+    this.classList.add('active');
+    document.getElementById(tabName).classList.add('active');
+    if (tabName === 'titles') updateTitles();
+    if (tabName === 'inventory') updateInventory();
+    if (tabName === 'garage') updateGarage();
+    if (tabName === 'challenges') updateChallenges();
+    if (tabName === 'stats') { updateStats(); updateHistory(); updateBlueprints(); }
+    if (tabName === 'achievements') updateAchievements();
+    if (tabName === 'upgrade') fillUpgradeSelect();
+    if (tabName === 'market') updateMarket();
+    if (tabName === 'battle') fillBattleSelect();
+    if (tabName === 'lab') updateLabPanels();
+  });
+}
+
+// Allow Enter key on redeem input
+document.getElementById('redeemInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') redeemCode();
+});
+
+// Start
+load();
+</script>
+</body>
+</html>
